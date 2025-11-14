@@ -1,0 +1,489 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Renata DOJO{% endblock %} | Marelli Training System</title>
+    
+    <style>
+        /* CSS Reset and Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --primary-coral: #ff9999;
+            --secondary-coral: #ff8866;
+            --dark-coral: #ff7755;
+            --light-coral: #ffaa99;
+            --accent-orange: #ffaa77;
+            --success-green: #00cc66;
+            --warning-orange: #ff9933;
+            --danger-red: #cc3333;
+            --light-gray: #f5f7fa;
+            --medium-gray: #e0e6ed;
+            --text-coral: #ff7755;
+            --dark-gray: #6c757d;
+            --white: #ffffff;
+            --text-dark: #2c3e50;
+            --shadow: rgba(0, 0, 0, 0.1);
+            --shadow-md: rgba(0, 0, 0, 0.15);
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--light-gray);
+            color: var(--text-dark);
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* Header Styles */
+        .header {
+            background: var(--white);
+            color: var(--text-dark);
+            padding: 1.2rem 2rem;
+            box-shadow: 0 2px 12px var(--shadow-md);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            border-bottom: 3px solid var(--primary-coral);
+        }
+
+        .header-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .logo-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logo-image {
+            height: 50px;
+            width: auto;
+        }
+
+        .brand-divider {
+            height: 50px;
+            width: 2px;
+            background: linear-gradient(to bottom, transparent, var(--primary-coral), transparent);
+        }
+
+        .brand-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+        }
+
+        .project-name {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--dark-coral);
+            letter-spacing: -0.5px;
+        }
+
+        .project-subtitle {
+            font-size: 0.85rem;
+            color: var(--dark-gray);
+            font-weight: 500;
+        }
+
+        .user-section {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .user-info {
+            text-align: right;
+            padding-right: 1rem;
+            border-right: 2px solid var(--medium-gray);
+        }
+
+        .user-name {
+            font-weight: 600;
+            font-size: 1rem;
+            color: var(--text-dark);
+            margin-bottom: 0.1rem;
+        }
+
+        .user-id {
+            font-size: 0.8rem;
+            color: var(--dark-gray);
+            font-weight: 500;
+        }
+
+        .btn {
+            padding: 0.65rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-logout {
+            background: linear-gradient(135deg, var(--primary-coral) 0%, var(--dark-coral) 100%);
+            color: var(--white);
+            border: none;
+        }
+
+        .btn-logout:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 119, 85, 0.3);
+        }
+
+        .btn-logout:active {
+            transform: translateY(0);
+        }
+        
+        /* Main Content Area */
+        .main-content {
+            flex: 1;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2.5rem 2rem;
+            width: 100%;
+        }
+        
+        /* Messages */
+        .messages {
+            margin-bottom: 2rem;
+        }
+        
+        .message {
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            border-left: 5px solid;
+            box-shadow: 0 2px 8px var(--shadow);
+            background: var(--white);
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        .message-success {
+            border-color: var(--success-green);
+            color: #006633;
+        }
+
+        .message-success::before {
+            content: "✓";
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--success-green);
+            color: white;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        
+        .message-warning {
+            border-color: var(--warning-orange);
+            color: #664400;
+        }
+
+        .message-warning::before {
+            content: "⚠";
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--warning-orange);
+            color: white;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        
+        .message-error {
+            border-color: var(--danger-red);
+            color: #661111;
+        }
+
+        .message-error::before {
+            content: "✕";
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--danger-red);
+            color: white;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        
+        .message-info {
+            border-color: var(--primary-coral);
+            color: #004466;
+        }
+
+        .message-info::before {
+            content: "ℹ";
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--primary-coral);
+            color: white;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        
+        /* Breadcrumb */
+        .breadcrumb {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+            font-size: 0.9rem;
+            color: var(--dark-gray);
+            padding: 0.8rem 1.2rem;
+            background: var(--white);
+            border-radius: 8px;
+            box-shadow: 0 1px 4px var(--shadow);
+        }
+        
+        .breadcrumb a {
+            color: var(--dark-coral);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s ease;
+        }
+        
+        .breadcrumb a:hover {
+            color: var(--primary-coral);
+            text-decoration: underline;
+        }
+        
+        .breadcrumb-separator {
+            color: var(--dark-gray);
+        }
+        
+        /* Page Header */
+        .page-header {
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 2px solid var(--medium-gray);
+        }
+        
+        .page-title {
+            font-size: 2.2rem;
+            color: var(--text-dark);
+            margin-bottom: 0.5rem;
+            font-weight: 700;
+        }
+        
+        .page-subtitle {
+            color: var(--dark-gray);
+            font-size: 1.1rem;
+            font-weight: 400;
+        }
+        
+        /* Footer */
+        .footer {
+            background-color: var(--white);
+            padding: 1.5rem 2rem;
+            text-align: center;
+            border-top: 2px solid var(--medium-gray);
+            margin-top: auto;
+            box-shadow: 0 -2px 8px var(--shadow);
+        }
+        
+        .footer-text {
+            color: var(--dark-gray);
+            font-size: 0.9rem;
+        }
+        
+        /* Utility Classes */
+        .text-center {
+            text-align: center;
+        }
+        
+        .mt-1 { margin-top: 0.5rem; }
+        .mt-2 { margin-top: 1rem; }
+        .mt-3 { margin-top: 1.5rem; }
+        .mb-1 { margin-bottom: 0.5rem; }
+        .mb-2 { margin-bottom: 1rem; }
+        .mb-3 { margin-bottom: 1.5rem; }
+        
+        /* Responsive Design */
+        @media (max-width: 968px) {
+            .header {
+                padding: 1rem 1.5rem;
+            }
+
+            .header-container {
+                flex-direction: column;
+                gap: 1.5rem;
+                text-align: center;
+            }
+
+            .logo-section {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .logo-wrapper {
+                flex-direction: column;
+                gap: 0.8rem;
+            }
+
+            .brand-divider {
+                width: 80px;
+                height: 2px;
+                background: linear-gradient(to right, transparent, var(--primary-coral), transparent);
+            }
+
+            .brand-info {
+                align-items: center;
+            }
+            
+            .user-section {
+                flex-direction: column;
+                gap: 1rem;
+                width: 100%;
+            }
+
+            .user-info {
+                border-right: none;
+                padding-right: 0;
+                text-align: center;
+            }
+
+            .btn-logout {
+                width: 100%;
+                max-width: 200px;
+            }
+            
+            .main-content {
+                padding: 1.5rem 1rem;
+            }
+            
+            .page-title {
+                font-size: 1.6rem;
+            }
+
+            .breadcrumb {
+                flex-wrap: wrap;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .project-name {
+                font-size: 1.2rem;
+            }
+
+            .page-title {
+                font-size: 1.4rem;
+            }
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-container">
+            <div class="logo-section">
+                <div class="logo-wrapper">
+                    <img src="{% static 'logo.png' %}" alt="Company Logo" class="logo-image">
+                    <div class="brand-divider"></div>
+                    <div class="brand-info">
+                        <div class="project-name">Marelli Training System</div>
+                        <div class="project-subtitle">Process DOJO Platform</div>
+                    </div>
+                </div>
+            </div>
+            
+            {% if user.is_authenticated %}
+            <div class="user-section">
+                <div class="user-info">
+                    <div class="user-name">{{ user.get_full_name|default:user.username }}</div>
+                    <div class="user-id">
+                        {% if user.employee_profile %}
+                        ID: {{ user.employee_profile.employee_id }} | {{ user.employee_profile.unit }}
+                        {% endif %}
+                    </div>
+                </div>
+                <a href="{% url 'process_dojo:logout' %}" class="btn btn-logout">Logout</a>
+            </div>
+            {% endif %}
+        </div>
+    </header>
+    
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Breadcrumb -->
+        {% block breadcrumb %}{% endblock %}
+        
+        <!-- Messages -->
+        {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+            <div class="message message-{{ message.tags }}">
+                <span>{{ message }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        <!-- Page Content -->
+        {% block content %}{% endblock %}
+    </main>
+    
+    <!-- Footer -->
+    {% comment %} <footer class="footer">
+        <div class="footer-text">
+            &copy; 2025 Marelli Process DOJO Training System. All rights reserved.
+        </div>
+    </footer> {% endcomment %}
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

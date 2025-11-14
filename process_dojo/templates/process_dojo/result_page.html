@@ -1,0 +1,468 @@
+{% extends "process_dojo/base.html" %}
+
+{% block title %}Test Results{% endblock %}
+
+{% block extra_css %}
+<style>
+    .results-container {
+        max-width: 900px;
+        margin: 0 auto;
+    }
+    
+    .results-header {
+        background: linear-gradient(135deg, 
+            {% if passed %}var(--success-green) 0%, #00aa55 100%{% else %}var(--danger-red) 0%, #aa1111 100%{% endif %});
+        color: var(--white);
+        padding: 3rem 2rem;
+        border-radius: 8px;
+        text-align: center;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 16px var(--shadow);
+    }
+    
+    .results-icon {
+        font-size: 5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .results-status {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+    }
+    
+    .results-message {
+        font-size: 1.2rem;
+        opacity: 0.95;
+        margin-bottom: 2rem;
+    }
+    
+    .score-display {
+        display: inline-block;
+        background-color: rgba(255, 255, 255, 0.2);
+        border: 3px solid rgba(255, 255, 255, 0.5);
+        border-radius: 12px;
+        padding: 1.5rem 3rem;
+    }
+    
+    .score-value {
+        font-size: 4rem;
+        font-weight: 700;
+        line-height: 1;
+    }
+    
+    .score-label {
+        font-size: 1rem;
+        margin-top: 0.5rem;
+        opacity: 0.9;
+    }
+    
+    .results-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .stat-card {
+        background-color: var(--white);
+        border-radius: 8px;
+        padding: 1.5rem;
+        text-align: center;
+        box-shadow: 0 2px 8px var(--shadow);
+        border-top: 4px solid;
+    }
+    
+    .stat-card.correct {
+        border-color: var(--success-green);
+    }
+    
+    .stat-card.incorrect {
+        border-color: var(--danger-red);
+    }
+    
+    .stat-card.total {
+        border-color: var(--primary-coral);
+    }
+    
+    .stat-value {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+    
+    .stat-value.correct {
+        color: var(--success-green);
+    }
+    
+    .stat-value.incorrect {
+        color: var(--danger-red);
+    }
+    
+    .stat-value.total {
+        color: var(--text-coral);
+    }
+    
+    .stat-label {
+        color: var(--dark-gray);
+        font-size: 0.9rem;
+    }
+    
+    .section-header {
+        background-color: var(--white);
+        border-radius: 8px;
+        padding: 1.5rem 2rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 8px var(--shadow);
+    }
+    
+    .section-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--text-dark);
+    }
+    
+    .section-subtitle {
+        color: var(--dark-gray);
+        margin-top: 0.3rem;
+    }
+    
+    .question-result {
+        background-color: var(--white);
+        border-radius: 8px;
+        padding: 2rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 8px var(--shadow);
+        border-left: 4px solid;
+    }
+    
+    .question-result.correct {
+        border-color: var(--success-green);
+        background-color: #f8fff;
+    }
+    
+    .question-result.incorrect {
+        border-color: var(--danger-red);
+        background-color: #fffaf8;
+    }
+    
+    .result-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+    
+    .result-number {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    
+    .question-num {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--text-dark);
+    }
+    
+    .result-badge {
+        padding: 0.4rem 1rem;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+    }
+    
+    .result-badge.correct {
+        background-color: #e6f9f0;
+        color: var(--success-green);
+    }
+    
+    .result-badge.incorrect {
+        background-color: #ffe6e6;
+        color: var(--danger-red);
+    }
+    
+    .question-text {
+        font-size: 1.1rem;
+        color: var(--text-dark);
+        line-height: 1.6;
+        margin-bottom: 1.5rem;
+        font-weight: 500;
+    }
+    
+    .answer-comparison {
+        display: grid;
+        gap: 1rem;
+    }
+    
+    .answer-row {
+        background-color: var(--light-gray);
+        border-radius: 6px;
+        padding: 1rem 1.2rem;
+    }
+    
+    .answer-row.your-answer {
+        border: 2px solid;
+    }
+    
+    .answer-row.your-answer.correct {
+        border-color: var(--success-green);
+        background-color: #f0fdf4;
+    }
+    
+    .answer-row.your-answer.incorrect {
+        border-color: var(--danger-red);
+        background-color: #fef2f2;
+    }
+    
+    .answer-row.correct-answer {
+        border: 2px solid var(--success-green);
+        background-color: #f0fdf4;
+    }
+    
+    .answer-label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--dark-gray);
+        margin-bottom: 0.5rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .answer-content {
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+        font-size: 1rem;
+        color: var(--text-dark);
+    }
+    
+    .answer-marker {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background-color: var(--white);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        flex-shrink: 0;
+    }
+    
+    .explanation-box {
+        background-color: #e6f3ff;
+        border-left: 4px solid var(--primary-coral);
+        border-radius: 6px;
+        padding: 1rem 1.2rem;
+        margin-top: 1rem;
+    }
+    
+    .explanation-title {
+        font-weight: 600;
+        color: #004466;
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+    }
+    
+    .explanation-text {
+        color: #006699;
+        line-height: 1.6;
+        font-size: 0.95rem;
+    }
+    
+    .actions-section {
+        background-color: var(--white);
+        border-radius: 8px;
+        padding: 2rem;
+        text-align: center;
+        box-shadow: 0 2px 8px var(--shadow);
+    }
+    
+    .actions-grid {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    
+    .btn-action {
+        padding: 1rem 2rem;
+        border-radius: 6px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 1rem;
+        transition: transform 0.2s ease, box-shadow 0.3s ease;
+        display: inline-block;
+    }
+    
+    .btn-dashboard {
+        background: linear-gradient(135deg, var(--primary-coral) 0%, var(--dark-coral) 100%);
+        color: var(--white);
+        box-shadow: 0 2px 8px rgba(255, 119, 85, 0.3);
+    }
+    
+    .btn-dashboard:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(255, 119, 85, 0.4);
+    }
+    
+    .btn-retake {
+        background-color: var(--light-gray);
+        color: var(--text-dark);
+    }
+    
+    .btn-retake:hover {
+        background-color: var(--medium-gray);
+    }
+    
+    @media (max-width: 768px) {
+        .results-header {
+            padding: 2rem 1.5rem;
+        }
+        
+        .results-status {
+            font-size: 2rem;
+        }
+        
+        .score-value {
+            font-size: 3rem;
+        }
+        
+        .results-stats {
+            grid-template-columns: 1fr;
+        }
+        
+        .question-result {
+            padding: 1.5rem;
+        }
+        
+        .result-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.8rem;
+        }
+        
+        .actions-grid {
+            flex-direction: column;
+        }
+        
+        .btn-action {
+            width: 100%;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="results-container">
+    <!-- Results Header -->
+    <div class="results-header">
+        <div class="results-icon">
+            {% if passed %}✓{% else %}✗{% endif %}
+        </div>
+        <div class="results-status">
+            {% if passed %}Congratulations! You Passed!{% else %}Test Not Passed{% endif %}
+        </div>
+        <div class="results-message">
+            {% if passed %}
+            Excellent work! You have successfully completed the training assessment.
+            {% else %}
+            Don't worry! Review the correct answers below and try again after studying the material.
+            {% endif %}
+        </div>
+        <div class="score-display">
+            <div class="score-value">{{ percentage|floatformat:1 }}%</div>
+            <div class="score-label">Your Score</div>
+        </div>
+    </div>
+    
+    <!-- Statistics -->
+    <div class="results-stats">
+        <div class="stat-card correct">
+            <div class="stat-value correct">{{ attempt.correct_answers }}</div>
+            <div class="stat-label">Correct Answers</div>
+        </div>
+        <div class="stat-card incorrect">
+            <div class="stat-value incorrect">{{ attempt.total_questions|add:"-"|add:attempt.correct_answers }}</div>
+            <div class="stat-label">Incorrect Answers</div>
+        </div>
+        <div class="stat-card total">
+            <div class="stat-value total">{{ attempt.total_questions }}</div>
+            <div class="stat-label">Total Questions</div>
+        </div>
+    </div>
+    
+    <!-- Detailed Results -->
+    <div class="section-header">
+        <h2 class="section-title">Detailed Results</h2>
+        <p class="section-subtitle">Review your answers and learn from the correct solutions</p>
+    </div>
+    
+    {% for result in results_data %}
+    <div class="question-result {% if result.is_correct %}correct{% else %}incorrect{% endif %}">
+        <div class="result-header">
+            <div class="result-number">
+                <span class="question-num">Question {{ forloop.counter }}</span>
+            </div>
+            <div class="result-badge {% if result.is_correct %}correct{% else %}incorrect{% endif %}">
+                {% if result.is_correct %}
+                <span>✓</span>
+                <span>Correct</span>
+                {% else %}
+                <span>✗</span>
+                <span>Incorrect</span>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="question-text">
+            {{ result.question.question_text }}
+        </div>
+        
+        <div class="answer-comparison">
+            <div class="answer-row your-answer {% if result.is_correct %}correct{% else %}incorrect{% endif %}">
+                <div class="answer-label">Your Answer</div>
+                <div class="answer-content">
+                    <span class="answer-marker">{{ result.user_answer|default:"—" }}</span>
+                    <span>{{ result.user_answer_text }}</span>
+                </div>
+            </div>
+            
+            {% if not result.is_correct %}
+            <div class="answer-row correct-answer">
+                <div class="answer-label">Correct Answer</div>
+                <div class="answer-content">
+                    <span class="answer-marker">{{ result.correct_answer }}</span>
+                    <span>{{ result.correct_answer_text }}</span>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
+        {% if result.question.explanation %}
+        <div class="explanation-box">
+            <div class="explanation-title">💡 Explanation</div>
+            <div class="explanation-text">{{ result.question.explanation }}</div>
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+    
+    <!-- Actions -->
+    <div class="actions-section">
+        <div class="actions-grid">
+            <a href="{% url 'process_dojo:dashboard' %}" class="btn-action btn-dashboard">
+                Return to Dashboard
+            </a>
+            {% if not passed %}
+            <a href="{% url 'process_dojo:video_detail' attempt.test.video.id %}" class="btn-action btn-retake">
+                Review Training & Retake
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

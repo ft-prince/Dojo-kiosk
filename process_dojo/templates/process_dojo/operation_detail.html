@@ -1,0 +1,390 @@
+{% extends "process_dojo/base.html" %}
+
+{% block title %}{{ operation.name }} - Training Videos{% endblock %}
+
+{% block extra_css %}
+<style>
+    .videos-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+        gap: 1.5rem;
+    }
+    
+    .video-card {
+        background-color: var(--white);
+        border-radius: 8px;
+        box-shadow: 0 2px 8px var(--shadow);
+        border: 2px solid transparent;
+        transition: all 0.3s ease;
+        overflow: hidden;
+    }
+    
+    .video-card:hover {
+        border-color: var(--primary-coral);
+        transform: translateY(-4px);
+        box-shadow: 0 4px 16px var(--shadow);
+    }
+    
+    .video-thumbnail {
+        width: 100%;
+        height: 200px;
+        background: linear-gradient(135deg, var(--light-coral) 0%, var(--primary-coral) 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .video-thumbnail img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    
+    .video-play-icon {
+        position: absolute;
+        width: 60px;
+        height: 60px;
+        background-color: rgba(255, 255, 255, 0.9);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+    }
+    
+    .video-duration {
+        position: absolute;
+        bottom: 0.8rem;
+        right: 0.8rem;
+        background-color: rgba(0, 0, 0, 0.7);
+        color: var(--white);
+        padding: 0.3rem 0.6rem;
+        border-radius: 4px;
+        font-size: 0.85rem;
+        font-weight: 500;
+    }
+    
+    .video-features {
+        position: absolute;
+        top: 0.8rem;
+        left: 0.8rem;
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .feature-badge {
+        background-color: rgba(0, 0, 0, 0.7);
+        color: var(--white);
+        padding: 0.3rem 0.6rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    
+    .video-body {
+        padding: 1.5rem;
+    }
+    
+    .video-title {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: var(--text-dark);
+        margin-bottom: 0.8rem;
+        line-height: 1.3;
+    }
+    
+    .video-description {
+        color: var(--dark-gray);
+        font-size: 0.9rem;
+        line-height: 1.5;
+        margin-bottom: 1.2rem;
+    }
+    
+    .video-progress {
+        margin-bottom: 1.2rem;
+    }
+    
+    .progress-header {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.5rem;
+    }
+    
+    .progress-label {
+        font-size: 0.85rem;
+        color: var(--dark-gray);
+        font-weight: 500;
+    }
+    
+    .progress-percentage {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: var(--text-coral);
+    }
+    
+    .progress-bar-container {
+        width: 100%;
+        height: 8px;
+        background-color: var(--medium-gray);
+        border-radius: 4px;
+        overflow: hidden;
+    }
+    
+    .progress-bar {
+        height: 100%;
+        background: linear-gradient(90deg, var(--primary-coral) 0%, var(--dark-coral) 100%);
+        border-radius: 4px;
+        transition: width 0.3s ease;
+    }
+    
+    .completion-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.4rem 0.8rem;
+        border-radius: 4px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+    }
+    
+    .badge-completed {
+        background-color: #e6f9f0;
+        color: var(--success-green);
+    }
+    
+    .badge-in-progress {
+        background-color: #fff4e6;
+        color: var(--warning-orange);
+    }
+    
+    .badge-not-started {
+        background-color: var(--light-gray);
+        color: var(--dark-gray);
+    }
+    
+    .video-actions {
+        display: flex;
+        gap: 0.8rem;
+    }
+    
+    .btn-watch {
+        flex: 1;
+        padding: 0.8rem 1.2rem;
+        background: linear-gradient(135deg, var(--primary-coral) 0%, var(--dark-coral) 100%);
+        color: var(--white);
+        text-align: center;
+        border-radius: 6px;
+        text-decoration: none;
+        font-weight: 600;
+        transition: transform 0.2s ease, box-shadow 0.3s ease;
+        box-shadow: 0 2px 8px rgba(255, 119, 85, 0.3);
+    }
+    
+    .btn-watch:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(255, 119, 85, 0.4);
+    }
+    
+    .btn-back {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.7rem 1.2rem;
+        background-color: var(--light-gray);
+        color: var(--text-dark);
+        border-radius: 6px;
+        text-decoration: none;
+        font-weight: 500;
+        transition: background-color 0.3s ease;
+        margin-bottom: 1.5rem;
+    }
+    
+    .btn-back:hover {
+        background-color: var(--medium-gray);
+    }
+    
+    .operation-info {
+        background-color: var(--light-gray);
+        border-left: 4px solid var(--primary-coral);
+        padding: 1rem 1.2rem;
+        border-radius: 6px;
+        margin-bottom: 2rem;
+    }
+    
+    .operation-info.ctq {
+        background-color: #fff4e6;
+        border-color: var(--warning-orange);
+    }
+    
+    .operation-info-title {
+        font-weight: 600;
+        color: var(--text-dark);
+        margin-bottom: 0.3rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .operation-info-text {
+        font-size: 0.9rem;
+        color: var(--dark-gray);
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        background-color: var(--white);
+        border-radius: 8px;
+        box-shadow: 0 2px 8px var(--shadow);
+    }
+    
+    .empty-icon {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        opacity: 0.3;
+    }
+    
+    .empty-title {
+        font-size: 1.3rem;
+        color: var(--text-dark);
+        margin-bottom: 0.5rem;
+    }
+    
+    .empty-text {
+        color: var(--dark-gray);
+        font-size: 1rem;
+    }
+    
+    @media (max-width: 768px) {
+        .videos-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb">
+    <a href="{% url 'process_dojo:dashboard' %}">Dashboard</a>
+    <span class="breadcrumb-separator">›</span>
+    <a href="{% url 'process_dojo:unit_detail' operation.line.unit.id %}">{{ operation.line.unit.name }}</a>
+    <span class="breadcrumb-separator">›</span>
+    <a href="{% url 'process_dojo:line_detail' operation.line.id %}">{{ operation.line.name }}</a>
+    <span class="breadcrumb-separator">›</span>
+    <span>{{ operation.name }}</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<a href="{% url 'process_dojo:line_detail' operation.line.id %}" class="btn-back">
+    ← Back to {{ operation.line.name }}
+</a>
+
+<div class="page-header">
+    <h1 class="page-title">{{ operation.name }}</h1>
+    {% if operation.operation_code %}
+    <p class="page-subtitle">Operation Code: {{ operation.operation_code }}</p>
+    {% endif %}
+</div>
+
+{% if operation.is_ctq_station %}
+<div class="operation-info ctq">
+    <div class="operation-info-title">
+        ⚠️ Critical to Quality (CTQ) Station
+    </div>
+    <div class="operation-info-text">
+        This operation is critical to quality. Please pay special attention during training and ensure 100% completion before proceeding to tests.
+    </div>
+</div>
+{% endif %}
+
+{% if operation.description %}
+<div class="operation-info">
+    <div class="operation-info-title">
+        📋 Operation Overview
+    </div>
+    <div class="operation-info-text">
+        {{ operation.description }}
+    </div>
+</div>
+{% endif %}
+
+<div class="videos-grid">
+    {% for data in video_data %}
+    <div class="video-card">
+        <div class="video-thumbnail">
+            {% if data.video.thumbnail %}
+            <img src="{{ data.video.thumbnail.url }}" alt="{{ data.video.title }}">
+            {% endif %}
+            <div class="video-play-icon">▶</div>
+            {% if data.video.duration_seconds > 0 %}
+            <div class="video-duration">
+                {% widthratio data.video.duration_seconds 60 1 %}:{% widthratio data.video.duration_seconds 60 1|stringformat:"02d" %} min
+            </div>
+            {% endif %}
+            <div class="video-features">
+                {% if data.video.has_voice %}
+                <span class="feature-badge">🔊 Voice</span>
+                {% endif %}
+                {% if data.video.has_callouts %}
+                <span class="feature-badge">📌 Callouts</span>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="video-body">
+            <h3 class="video-title">{{ data.video.title }}</h3>
+            
+            {% if data.video.description %}
+            <p class="video-description">{{ data.video.description|truncatewords:20 }}</p>
+            {% endif %}
+            
+            {% if data.completion %}
+                {% if data.completion.is_completed %}
+                <div class="completion-badge badge-completed">
+                    ✓ Completed
+                </div>
+                {% else %}
+                <div class="completion-badge badge-in-progress">
+                    ⏳ In Progress
+                </div>
+                {% endif %}
+                
+                <div class="video-progress">
+                    <div class="progress-header">
+                        <span class="progress-label">Your Progress</span>
+                        <span class="progress-percentage">{{ data.completion.completion_percentage|floatformat:0 }}%</span>
+                    </div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar" style="width: {{ data.completion.completion_percentage }}%"></div>
+                    </div>
+                </div>
+            {% else %}
+            <div class="completion-badge badge-not-started">
+                Not Started
+            </div>
+            {% endif %}
+            
+            <div class="video-actions">
+                <a href="{% url 'process_dojo:video_detail' data.video.id %}" class="btn-watch">
+                    {% if data.completion and data.completion.completion_percentage > 0 %}
+                    Continue Watching →
+                    {% else %}
+                    Start Training →
+                    {% endif %}
+                </a>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="empty-state">
+        <div class="empty-icon">📹</div>
+        <div class="empty-title">No Training Videos Available</div>
+        <div class="empty-text">There are no training videos configured for this operation yet.</div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

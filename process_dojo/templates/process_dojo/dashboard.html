@@ -1,0 +1,382 @@
+{% extends "process_dojo/base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Statistics Cards */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 3rem;
+    }
+    
+    .stat-card {
+        background-color: var(--white);
+        border-radius: 8px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 8px var(--shadow);
+        border-left: 4px solid;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 4px 12px var(--shadow);
+    }
+    
+    .stat-card-videos {
+        border-color: var(--primary-coral);
+    }
+    
+    .stat-card-tests {
+        border-color: var(--success-green);
+    }
+    
+    .stat-card-progress {
+        border-color: var(--warning-orange);
+    }
+    
+    .stat-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+    
+    .stat-title {
+        font-size: 0.9rem;
+        color: var(--dark-gray);
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .stat-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .stat-icon-videos {
+        background-color: rgba(255, 153, 153, 0.1);
+    }
+    
+    .stat-icon-tests {
+        background-color: rgba(0, 204, 102, 0.1);
+    }
+    
+    .stat-icon-progress {
+        background-color: rgba(255, 153, 51, 0.1);
+    }
+    
+    .stat-value {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: var(--text-dark);
+        line-height: 1;
+    }
+    
+    .stat-label {
+        font-size: 0.85rem;
+        color: var(--dark-gray);
+        margin-top: 0.3rem;
+    }
+    
+    /* Units Grid */
+    .section-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--text-dark);
+        margin-bottom: 1.5rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid var(--medium-gray);
+    }
+    
+    .units-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 3rem;
+    }
+    
+    .unit-card {
+        background-color: var(--white);
+        border-radius: 8px;
+        box-shadow: 0 2px 8px var(--shadow);
+        border: 2px solid transparent;
+        transition: all 0.3s ease;
+        overflow: hidden;
+    }
+    
+    .unit-card:hover {
+        border-color: var(--primary-coral);
+        transform: translateY(-4px);
+        box-shadow: 0 4px 16px var(--shadow);
+    }
+    
+    .unit-header {
+        background: linear-gradient(135deg, var(--primary-coral) 0%, var(--dark-coral) 100%);
+        color: var(--white);
+        padding: 1.5rem;
+    }
+    
+    .unit-name {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 0.3rem;
+    }
+    
+    .unit-description {
+        font-size: 0.9rem;
+        opacity: 0.95;
+    }
+    
+    .unit-body {
+        padding: 1.5rem;
+    }
+    
+    .unit-stats {
+        display: flex;
+        gap: 1.5rem;
+        margin-bottom: 1.2rem;
+    }
+    
+    .unit-stat-item {
+        flex: 1;
+    }
+    
+    .unit-stat-value {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: var(--text-coral);
+    }
+    
+    .unit-stat-label {
+        font-size: 0.85rem;
+        color: var(--dark-gray);
+        margin-top: 0.2rem;
+    }
+    
+    .unit-actions {
+        margin-top: 1.2rem;
+    }
+    
+    .btn-view-unit {
+        display: inline-block;
+        width: 100%;
+        padding: 0.8rem 1.2rem;
+        background: linear-gradient(135deg, var(--primary-coral) 0%, var(--dark-coral) 100%);
+        color: var(--white);
+        text-align: center;
+        border-radius: 6px;
+        text-decoration: none;
+        font-weight: 600;
+        transition: transform 0.2s ease, box-shadow 0.3s ease;
+        box-shadow: 0 2px 8px rgba(255, 119, 85, 0.3);
+    }
+    
+    .btn-view-unit:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(255, 119, 85, 0.4);
+    }
+    
+    /* Recent Activity */
+    .activity-list {
+        background-color: var(--white);
+        border-radius: 8px;
+        box-shadow: 0 2px 8px var(--shadow);
+        overflow: hidden;
+    }
+    
+    .activity-item {
+        padding: 1.2rem 1.5rem;
+        border-bottom: 1px solid var(--medium-gray);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: background-color 0.3s ease;
+    }
+    
+    .activity-item:last-child {
+        border-bottom: none;
+    }
+    
+    .activity-item:hover {
+        background-color: var(--light-gray);
+    }
+    
+    .activity-info {
+        flex: 1;
+    }
+    
+    .activity-video {
+        font-weight: 600;
+        color: var(--text-dark);
+        margin-bottom: 0.3rem;
+    }
+    
+    .activity-operation {
+        font-size: 0.85rem;
+        color: var(--dark-gray);
+    }
+    
+    .activity-progress {
+        text-align: right;
+    }
+    
+    .progress-percentage {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--text-coral);
+    }
+    
+    .progress-status {
+        font-size: 0.85rem;
+        color: var(--dark-gray);
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 3rem 2rem;
+        color: var(--dark-gray);
+    }
+    
+    .empty-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.3;
+    }
+    
+    .empty-text {
+        font-size: 1.1rem;
+    }
+    
+    @media (max-width: 768px) {
+        .stats-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .units-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .unit-stats {
+            flex-direction: column;
+            gap: 1rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Training Dashboard</h1>
+    <p class="page-subtitle">Welcome back! Continue your training journey.</p>
+</div>
+
+<!-- Statistics Cards -->
+<div class="stats-grid">
+    <div class="stat-card stat-card-videos">
+        <div class="stat-header">
+            <div class="stat-title">Videos Completed</div>
+            <div class="stat-icon stat-icon-videos">📹</div>
+        </div>
+        <div class="stat-value">{{ total_videos_completed }}</div>
+        <div class="stat-label">Training videos watched</div>
+    </div>
+    
+    <div class="stat-card stat-card-tests">
+        <div class="stat-header">
+            <div class="stat-title">Tests Passed</div>
+            <div class="stat-icon stat-icon-tests">✓</div>
+        </div>
+        <div class="stat-value">{{ total_tests_passed }}</div>
+        <div class="stat-label">Successful assessments</div>
+    </div>
+    
+    <div class="stat-card stat-card-progress">
+        <div class="stat-header">
+            <div class="stat-title">In Progress</div>
+            <div class="stat-icon stat-icon-progress">⏳</div>
+        </div>
+        <div class="stat-value">{{ in_progress_attempts }}</div>
+        <div class="stat-label">Tests to complete</div>
+    </div>
+</div>
+
+<!-- Training Units -->
+<h2 class="section-title">Training Units</h2>
+<div class="units-grid">
+    {% for unit in units %}
+    <div class="unit-card">
+        <div class="unit-header">
+            <div class="unit-name">{{ unit.name }}</div>
+            {% if unit.description %}
+            <div class="unit-description">{{ unit.description }}</div>
+            {% endif %}
+        </div>
+        
+        <div class="unit-body">
+            <div class="unit-stats">
+                <div class="unit-stat-item">
+                    <div class="unit-stat-value">{{ unit.lines.count }}</div>
+                    <div class="unit-stat-label">Lines</div>
+                </div>
+                <div class="unit-stat-item">
+                    <div class="unit-stat-value">
+                        {% with operations_count=0 %}
+                            {% for line in unit.lines.all %}
+                                {% with operations_count=operations_count|add:line.operations.count %}{% endwith %}
+                            {% endfor %}
+                        {% endwith %}
+                        {{ unit.lines.all|length }}+
+                    </div>
+                    <div class="unit-stat-label">Operations</div>
+                </div>
+            </div>
+            
+            <div class="unit-actions">
+                <a href="{% url 'process_dojo:unit_detail' unit.id %}" class="btn-view-unit">
+                    View Training Content →
+                </a>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="empty-state">
+        <div class="empty-icon">📦</div>
+        <div class="empty-text">No training units available yet.</div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Recent Activity -->
+{% if recent_completions %}
+<h2 class="section-title">Recent Activity</h2>
+<div class="activity-list">
+    {% for completion in recent_completions %}
+    <div class="activity-item">
+        <div class="activity-info">
+            <div class="activity-video">{{ completion.video.title }}</div>
+            <div class="activity-operation">
+                {{ completion.video.operation.line.unit.name }} → 
+                {{ completion.video.operation.line.name }} → 
+                {{ completion.video.operation.name }}
+            </div>
+        </div>
+        <div class="activity-progress">
+            <div class="progress-percentage">{{ completion.completion_percentage|floatformat:0 }}%</div>
+            <div class="progress-status">
+                {% if completion.is_completed %}✓ Completed{% else %}In Progress{% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,276 @@
+{% extends "process_dojo/base.html" %}
+
+{% block title %}{{ line.name }} - Operations{% endblock %}
+
+{% block extra_css %}
+<style>
+    .operations-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 1.5rem;
+    }
+    
+    .operation-card {
+        background-color: var(--white);
+        border-radius: 8px;
+        box-shadow: 0 2px 8px var(--shadow);
+        border: 2px solid transparent;
+        transition: all 0.3s ease;
+        overflow: hidden;
+    }
+    
+    .operation-card:hover {
+        border-color: var(--primary-coral);
+        transform: translateY(-4px);
+        box-shadow: 0 4px 16px var(--shadow);
+    }
+    
+    .operation-card.ctq {
+        border-left: 4px solid var(--warning-orange);
+    }
+    
+    .operation-header {
+        background: linear-gradient(135deg, var(--primary-coral) 0%, var(--dark-coral) 100%);
+        color: var(--white);
+        padding: 1.5rem;
+        position: relative;
+    }
+    
+    .operation-header.ctq-header {
+        background: linear-gradient(135deg, var(--warning-orange) 0%, #ff8800 100%);
+    }
+    
+    .operation-badges {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 0.8rem;
+    }
+    
+    .badge {
+        padding: 0.3rem 0.8rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        background-color: rgba(255, 255, 255, 0.2);
+    }
+    
+    .ctq-badge-large {
+        background-color: rgba(255, 255, 255, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.5);
+    }
+    
+    .operation-name {
+        font-size: 1.3rem;
+        font-weight: 700;
+        margin-bottom: 0.3rem;
+    }
+    
+    .operation-code {
+        font-size: 0.9rem;
+        opacity: 0.95;
+        font-weight: 500;
+    }
+    
+    .operation-body {
+        padding: 1.5rem;
+    }
+    
+    .operation-description {
+        color: var(--dark-gray);
+        font-size: 0.9rem;
+        line-height: 1.5;
+        margin-bottom: 1.2rem;
+        padding-bottom: 1.2rem;
+        border-bottom: 1px solid var(--medium-gray);
+    }
+    
+    .video-count-section {
+        text-align: center;
+        margin-bottom: 1.2rem;
+    }
+    
+    .video-count-value {
+        font-size: 3rem;
+        font-weight: 700;
+        color: var(--text-coral);
+        line-height: 1;
+    }
+    
+    .video-count-label {
+        font-size: 0.9rem;
+        color: var(--dark-gray);
+        margin-top: 0.3rem;
+    }
+    
+    .btn-view-operation {
+        display: block;
+        width: 100%;
+        padding: 0.8rem 1.2rem;
+        background: linear-gradient(135deg, var(--primary-coral) 0%, var(--dark-coral) 100%);
+        color: var(--white);
+        text-align: center;
+        border-radius: 6px;
+        text-decoration: none;
+        font-weight: 600;
+        transition: transform 0.2s ease, box-shadow 0.3s ease;
+        box-shadow: 0 2px 8px rgba(255, 119, 85, 0.3);
+    }
+    
+    .btn-view-operation:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(255, 119, 85, 0.4);
+    }
+    
+    .btn-back {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.7rem 1.2rem;
+        background-color: var(--light-gray);
+        color: var(--text-dark);
+        border-radius: 6px;
+        text-decoration: none;
+        font-weight: 500;
+        transition: background-color 0.3s ease;
+        margin-bottom: 1.5rem;
+    }
+    
+    .btn-back:hover {
+        background-color: var(--medium-gray);
+    }
+    
+    .ctq-notice {
+        background-color: #fff4e6;
+        border-left: 4px solid var(--warning-orange);
+        padding: 1rem 1.2rem;
+        border-radius: 6px;
+        margin-bottom: 1.5rem;
+    }
+    
+    .ctq-notice-title {
+        font-weight: 600;
+        color: #664400;
+        margin-bottom: 0.3rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .ctq-notice-text {
+        font-size: 0.9rem;
+        color: #886600;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        background-color: var(--white);
+        border-radius: 8px;
+        box-shadow: 0 2px 8px var(--shadow);
+    }
+    
+    .empty-icon {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        opacity: 0.3;
+    }
+    
+    .empty-title {
+        font-size: 1.3rem;
+        color: var(--text-dark);
+        margin-bottom: 0.5rem;
+    }
+    
+    .empty-text {
+        color: var(--dark-gray);
+        font-size: 1rem;
+    }
+    
+    @media (max-width: 768px) {
+        .operations-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb">
+    <a href="{% url 'process_dojo:dashboard' %}">Dashboard</a>
+    <span class="breadcrumb-separator">›</span>
+    <a href="{% url 'process_dojo:unit_detail' line.unit.id %}">{{ line.unit.name }}</a>
+    <span class="breadcrumb-separator">›</span>
+    <span>{{ line.name }}</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<a href="{% url 'process_dojo:unit_detail' line.unit.id %}" class="btn-back">
+    ← Back to {{ line.unit.name }}
+</a>
+
+<div class="page-header">
+    <h1 class="page-title">{{ line.name }}</h1>
+    {% if line.description %}
+    <p class="page-subtitle">{{ line.description }}</p>
+    {% endif %}
+</div>
+
+{% comment %}Show CTQ notice if any operations are CTQ stations{% endcomment %}
+{% regroup operations by is_ctq_station as ctq_groups %}
+{% for group in ctq_groups %}
+    {% if group.grouper %}
+        <div class="ctq-notice">
+            <div class="ctq-notice-title">
+                ⚠️ Critical to Quality (CTQ) Stations Present
+            </div>
+            <div class="ctq-notice-text">
+                Some operations are marked as CTQ stations and require special attention during training.
+            </div>
+        </div>
+    {% endif %}
+{% endfor %}
+
+<div class="operations-grid">
+    {% for operation in operations %}
+    <div class="operation-card {% if operation.is_ctq_station %}ctq{% endif %}">
+        <div class="operation-header {% if operation.is_ctq_station %}ctq-header{% endif %}">
+            <div class="operation-badges">
+                {% if operation.is_ctq_station %}
+                <span class="badge ctq-badge-large">⚠️ CTQ STATION</span>
+                {% endif %}
+                {% if operation.operation_code %}
+                <span class="badge">{{ operation.operation_code }}</span>
+                {% endif %}
+            </div>
+            <div class="operation-name">{{ operation.name }}</div>
+        </div>
+        
+        <div class="operation-body">
+            {% if operation.description %}
+            <div class="operation-description">
+                {{ operation.description }}
+            </div>
+            {% endif %}
+            
+            <div class="video-count-section">
+                <div class="video-count-value">{{ operation.videos.count }}</div>
+                <div class="video-count-label">
+                    Training Video{% if operation.videos.count != 1 %}s{% endif %} Available
+                </div>
+            </div>
+            
+            <a href="{% url 'process_dojo:operation_detail' operation.id %}" class="btn-view-operation">
+                View Training Videos →
+            </a>
+        </div>
+    </div>
+    {% empty %}
+    <div class="empty-state">
+        <div class="empty-icon">⚙️</div>
+        <div class="empty-title">No Operations Available</div>
+        <div class="empty-text">There are no operations configured for this line yet.</div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

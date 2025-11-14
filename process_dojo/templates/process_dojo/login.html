@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | Process DOJO</title>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --primary-coral: #ff9999;
+            --secondary-coral: #ff8866;
+            --dark-coral: #ff7755;
+            --light-coral: #ffaa99;
+            --success-green: #00cc66;
+            --danger-red: #cc3333;
+            --light-gray: #f5f7fa;
+            --medium-gray: #e0e6ed;
+            --text-coral: #ff7755;
+            --dark-gray: #6c757d;
+            --white: #ffffff;
+            --text-dark: #2c3e50;
+            --shadow: rgba(0, 0, 0, 0.1);
+            --shadow-md: rgba(0, 0, 0, 0.15);
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: var(--light-gray);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            position: relative;
+        }
+
+        /* Decorative background elements */
+        body::before {
+            content: '';
+            position: absolute;
+             background: radial-gradient(circle, var(--light-coral) 0%, transparent 70%);
+            opacity: 0.3;
+            border-radius: 50%;
+            z-index: 0;
+        }
+
+        body::after {
+            content: '';
+            position: absolute;
+            bottom: -30%;
+            left: -10%;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, var(--primary-coral) 0%, transparent 70%);
+            opacity: 0.2;
+            border-radius: 50%;
+            z-index: 0;
+        }
+        
+        .login-container {
+            background-color: var(--white);
+            border-radius: 16px;
+            box-shadow: 0 12px 32px var(--shadow-md);
+            max-width: 480px;
+            width: 100%;
+            overflow: hidden;
+            position: relative;
+            z-index: 1;
+            border-top: 4px solid var(--primary-coral);
+        }
+        
+        .login-header {
+            background: var(--white);
+            color: var(--text-dark);
+            padding: 3rem 2rem 2rem;
+            text-align: center;
+            border-bottom: 2px solid var(--light-gray);
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .company-logo {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, var(--primary-coral) 0%, var(--dark-coral) 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(255, 119, 85, 0.3);
+        }
+
+        .company-logo svg {
+            width: 35px;
+            height: 35px;
+            fill: var(--white);
+        }
+        
+        .login-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 0.3rem;
+            color: var(--dark-coral);
+            letter-spacing: -0.5px;
+        }
+        
+        .login-subtitle {
+            font-size: 0.95rem;
+            color: var(--dark-gray);
+            font-weight: 500;
+        }
+        
+        .login-body {
+            padding: 2.5rem 2rem;
+        }
+        
+        .biometric-section {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding: 2rem;
+            background: linear-gradient(135deg, rgba(255, 153, 153, 0.08) 0%, rgba(255, 119, 85, 0.08) 100%);
+            border-radius: 12px;
+            border: 2px dashed var(--primary-coral);
+        }
+        
+        .biometric-icon {
+            width: 90px;
+            height: 90px;
+            margin: 0 auto 1rem;
+            background: linear-gradient(135deg, var(--primary-coral) 0%, var(--dark-coral) 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 6px 20px rgba(255, 119, 85, 0.3);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+                box-shadow: 0 6px 20px rgba(255, 119, 85, 0.3);
+            }
+            50% {
+                transform: scale(1.05);
+                box-shadow: 0 8px 24px rgba(255, 119, 85, 0.4);
+            }
+        }
+        
+        .biometric-icon svg {
+            width: 45px;
+            height: 45px;
+            fill: var(--white);
+        }
+        
+        .biometric-text {
+            font-size: 1.1rem;
+            color: var(--text-dark);
+            margin-bottom: 0.3rem;
+            font-weight: 600;
+        }
+        
+        .biometric-subtext {
+            color: var(--dark-gray);
+            font-size: 0.9rem;
+        }
+        
+        .divider {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            margin: 2rem 0 1.5rem;
+        }
+
+        .divider::before,
+        .divider::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid var(--medium-gray);
+        }
+
+        .divider span {
+            padding: 0 1rem;
+            color: var(--dark-gray);
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 0.6rem;
+            color: var(--text-dark);
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 1rem 1.2rem;
+            border: 2px solid var(--medium-gray);
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: var(--white);
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary-coral);
+            box-shadow: 0 0 0 3px rgba(255, 153, 153, 0.1);
+        }
+
+        .form-input::placeholder {
+            color: var(--dark-gray);
+            opacity: 0.6;
+        }
+        
+        .btn-login {
+            width: 100%;
+            padding: 1.1rem;
+            background: linear-gradient(135deg, var(--primary-coral) 0%, var(--dark-coral) 100%);
+            color: var(--white);
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(255, 119, 85, 0.3);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 0.5rem;
+        }
+        
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 119, 85, 0.4);
+        }
+        
+        .btn-login:active {
+            transform: translateY(0);
+        }
+        
+        .message {
+            padding: 1rem 1.2rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            border-left: 4px solid;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        .message-error {
+            background-color: #ffe6e6;
+            border-color: var(--danger-red);
+            color: #661111;
+        }
+
+        .message-error::before {
+            content: "✕";
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--danger-red);
+            color: white;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        
+        .message-success {
+            background-color: #e6f9f0;
+            border-color: var(--success-green);
+            color: #006633;
+        }
+
+        .message-success::before {
+            content: "✓";
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--success-green);
+            color: white;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        
+        .message-info {
+            background-color: #e6f3ff;
+            border-color: var(--primary-coral);
+            color: #004466;
+        }
+
+        .message-info::before {
+            content: "ℹ";
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--primary-coral);
+            color: white;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        
+        .error-text {
+            color: var(--danger-red);
+            font-size: 0.85rem;
+            margin-top: 0.4rem;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .error-text::before {
+            content: "⚠";
+        }
+
+        .login-footer {
+            text-align: center;
+            padding: 1.5rem 2rem;
+            background: var(--light-gray);
+            border-top: 1px solid var(--medium-gray);
+        }
+
+        .footer-text {
+            color: var(--dark-gray);
+            font-size: 0.85rem;
+        }
+        
+        @media (max-width: 480px) {
+            .login-header {
+                padding: 2.5rem 1.5rem 1.5rem;
+            }
+            
+            .login-body {
+                padding: 2rem 1.5rem;
+            }
+            
+            .login-title {
+                font-size: 1.5rem;
+            }
+
+            .company-logo {
+                width: 50px;
+                height: 50px;
+            }
+
+            .company-logo svg {
+                width: 30px;
+                height: 30px;
+            }
+
+            .biometric-section {
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <div class="logo-container">
+                <div class="company-logo">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/>
+                    </svg>
+                </div>
+            </div>
+            <div class="login-title">Marelli Training System</div>
+            <div class="login-subtitle">Process DOJO Platform</div>
+        </div>
+        
+        <div class="login-body">
+            <!-- Biometric Section -->
+            <div class="biometric-section">
+                <div class="biometric-icon">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M12 1C8.14 1 5 4.14 5 8c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-3.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7zm0 2c2.76 0 5 2.24 5 5 0 2.76-2.24 5-5 5s-5-2.24-5-5 2.24-5 5-5zm-1 14v2h2v-2h-2zm-3 2v2h2v-2H8zm6 0v2h2v-2h-2zm-3 2v2h2v-2h-2z"/>
+                    </svg>
+                </div>
+                <div class="biometric-text">Place Your Finger</div>
+                <div class="biometric-subtext">on the biometric scanner to login</div>
+            </div>
+            
+            <!-- Divider -->
+            <div class="divider">
+                <span>Or login manually</span>
+            </div>
+            
+            {% if messages %}
+                {% for message in messages %}
+                <div class="message message-{{ message.tags }}">
+                    <span>{{ message }}</span>
+                </div>
+                {% endfor %}
+            {% endif %}
+            
+            <form method="post" action="{% url 'process_dojo:login' %}">
+                {% csrf_token %}
+                
+                <div class="form-group">
+                    <label for="username" class="form-label">User ID</label>
+                    <input 
+                        type="text" 
+                        id="username" 
+                        name="username" 
+                        class="form-input" 
+                        placeholder="Enter your user ID"
+                        required
+                        autofocus
+                    >
+                    {% if form.username.errors %}
+                        <div class="error-text">{{ form.username.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label for="password" class="form-label">Password</label>
+                    <input 
+                        type="password" 
+                        id="password" 
+                        name="password" 
+                        class="form-input" 
+                        placeholder="Enter your password"
+                        required
+                    >
+                    {% if form.password.errors %}
+                        <div class="error-text">{{ form.password.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                
+                <input type="hidden" name="next" value="{{ next }}">
+                
+                <button type="submit" class="btn-login">Login</button>
+            </form>
+        </div>
+
+        <div class="login-footer">
+            <div class="footer-text">&copy; 2025 Marelli Process DOJO. All rights reserved.</div>
+        </div>
+    </div>
+</body>
+</html>

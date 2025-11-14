@@ -1,0 +1,634 @@
+{% extends "process_dojo/base.html" %}
+
+{% block title %}Test: {{ attempt.test.title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .test-container {
+        max-width: 900px;
+        margin: 0 auto;
+    }
+    
+    .test-header-section {
+        background: linear-gradient(135deg, var(--primary-coral) 0%, var(--dark-coral) 100%);
+        color: var(--white);
+        padding: 2rem;
+        border-radius: 8px;
+        margin-bottom: 2rem;
+        box-shadow: 0 2px 12px var(--shadow);
+    }
+    
+    .test-title-large {
+        font-size: 1.8rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+    }
+    
+    .test-meta {
+        display: flex;
+        gap: 2rem;
+        flex-wrap: wrap;
+        font-size: 0.95rem;
+    }
+    
+    .test-meta-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .timer-section {
+        background-color: var(--white);
+        border: 2px solid var(--primary-coral);
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 2px 8px var(--shadow);
+    }
+    
+    .timer-label {
+        font-size: 1rem;
+        color: var(--dark-gray);
+        font-weight: 500;
+    }
+    
+    .timer-display {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--text-coral);
+        font-family: 'Courier New', monospace;
+    }
+    
+    .timer-display.warning {
+        color: var(--warning-orange);
+        animation: pulse 1s infinite;
+    }
+    
+    .timer-display.danger {
+        color: var(--danger-red);
+        animation: pulse 0.5s infinite;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.6; }
+    }
+    
+    .auto-save-indicator {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.9rem;
+        color: var(--dark-gray);
+    }
+    
+    .save-icon {
+        font-size: 1.2rem;
+    }
+    
+    .save-icon.saving {
+        animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+    
+    .question-card {
+        background-color: var(--white);
+        border-radius: 8px;
+        padding: 2rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 8px var(--shadow);
+        border-left: 4px solid var(--primary-coral);
+    }
+    
+    .question-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 1.5rem;
+    }
+    
+    .question-number {
+        background: linear-gradient(135deg, var(--primary-coral) 0%, var(--dark-coral) 100%);
+        color: var(--white);
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        font-weight: 700;
+        font-size: 1rem;
+    }
+    
+    .question-marks {
+        background-color: var(--light-gray);
+        color: var(--text-dark);
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+    
+    .question-text {
+        font-size: 1.1rem;
+        color: var(--text-dark);
+        line-height: 1.6;
+        margin-bottom: 1.5rem;
+        font-weight: 500;
+    }
+    
+    .options-container {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .option-item {
+        position: relative;
+    }
+    
+    .option-input {
+        position: absolute;
+        opacity: 0;
+        cursor: pointer;
+    }
+    
+    .option-label {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem 1.2rem;
+        background-color: var(--light-gray);
+        border: 2px solid transparent;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .option-input:checked + .option-label {
+        background-color: var(--white);
+        border-color: var(--primary-coral);
+        box-shadow: 0 2px 8px var(--shadow);
+    }
+    
+    .option-label:hover {
+        background-color: var(--white);
+        border-color: var(--light-coral);
+    }
+    
+    .option-marker {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background-color: var(--white);
+        border: 2px solid var(--medium-gray);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        color: var(--text-dark);
+        flex-shrink: 0;
+        transition: all 0.3s ease;
+    }
+    
+    .option-input:checked + .option-label .option-marker {
+        background: linear-gradient(135deg, var(--primary-coral) 0%, var(--dark-coral) 100%);
+        border-color: var(--dark-coral);
+        color: var(--white);
+    }
+    
+    .option-text {
+        flex: 1;
+        color: var(--text-dark);
+        font-size: 1rem;
+    }
+    
+    .progress-overview {
+        background-color: var(--white);
+        border-radius: 8px;
+        padding: 1.5rem 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 2px 8px var(--shadow);
+    }
+    
+    .progress-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--text-dark);
+        margin-bottom: 1rem;
+    }
+    
+    .progress-stats {
+        display: flex;
+        gap: 2rem;
+        flex-wrap: wrap;
+    }
+    
+    .progress-stat {
+        flex: 1;
+        min-width: 150px;
+    }
+    
+    .progress-stat-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--text-coral);
+    }
+    
+    .progress-stat-label {
+        font-size: 0.9rem;
+        color: var(--dark-gray);
+        margin-top: 0.3rem;
+    }
+    
+    .submit-section {
+        background-color: var(--white);
+        border-radius: 8px;
+        padding: 2rem;
+        text-align: center;
+        box-shadow: 0 2px 12px var(--shadow);
+    }
+    
+    .submit-warning {
+        background-color: #fff4e6;
+        border: 2px solid var(--warning-orange);
+        border-radius: 6px;
+        padding: 1rem 1.2rem;
+        margin-bottom: 1.5rem;
+        color: #664400;
+        font-size: 0.95rem;
+    }
+    
+    .submit-actions {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    
+    .btn-submit {
+        padding: 1rem 3rem;
+        background: linear-gradient(135deg, var(--success-green) 0%, #00aa55 100%);
+        color: var(--white);
+        border: none;
+        border-radius: 6px;
+        font-size: 1.1rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: transform 0.2s ease, box-shadow 0.3s ease;
+        box-shadow: 0 4px 12px rgba(0, 204, 102, 0.3);
+    }
+    
+    .btn-submit:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(0, 204, 102, 0.4);
+    }
+    
+    .btn-save-exit {
+        padding: 1rem 2rem;
+        background-color: var(--light-gray);
+        color: var(--text-dark);
+        border: none;
+        border-radius: 6px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
+    
+    .btn-save-exit:hover {
+        background-color: var(--medium-gray);
+    }
+    
+    @media (max-width: 768px) {
+        .test-header-section {
+            padding: 1.5rem;
+        }
+        
+        .test-title-large {
+            font-size: 1.4rem;
+        }
+        
+        .timer-section {
+            flex-direction: column;
+            gap: 1rem;
+            text-align: center;
+        }
+        
+        .question-card {
+            padding: 1.5rem;
+        }
+        
+        .question-header {
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+        
+        .submit-actions {
+            flex-direction: column;
+        }
+        
+        .btn-submit,
+        .btn-save-exit {
+            width: 100%;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="test-container">
+    <!-- Test Header -->
+    <div class="test-header-section">
+        <h1 class="test-title-large">{{ test.title }}</h1>
+        <div class="test-meta">
+            <div class="test-meta-item">
+                <span>📝</span>
+                <span>{{ test.questions.count }} Questions</span>
+            </div>
+            <div class="test-meta-item">
+                <span>⏱️</span>
+                <span>{{ test.time_limit_minutes }} Minutes</span>
+            </div>
+            <div class="test-meta-item">
+                <span>✓</span>
+                <span>Pass: {{ test.passing_score }}%</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Timer and Auto-save -->
+    <div class="timer-section">
+        <div>
+            <div class="timer-label">Time Remaining</div>
+            <div class="timer-display" id="timer">{{ time_remaining_seconds|floatformat:0 }}</div>
+        </div>
+        <div class="auto-save-indicator">
+            <span class="save-icon" id="save-icon">💾</span>
+            <span id="save-status">Auto-save enabled</span>
+        </div>
+    </div>
+    
+    <!-- Progress Overview -->
+    <div class="progress-overview">
+        <div class="progress-title">Your Progress</div>
+        <div class="progress-stats">
+            <div class="progress-stat">
+                <div class="progress-stat-value" id="answered-count">0</div>
+                <div class="progress-stat-label">Answered</div>
+            </div>
+            <div class="progress-stat">
+                <div class="progress-stat-value" id="remaining-count">{{ test.questions.count }}</div>
+                <div class="progress-stat-label">Remaining</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Questions -->
+    <form id="test-form" method="post" action="{% url 'process_dojo:submit_test' attempt.id %}">
+        {% csrf_token %}
+        
+        {% for data in question_data %}
+        <div class="question-card">
+            <div class="question-header">
+                <div class="question-number">
+                    Question {{ forloop.counter }}
+                </div>
+                <div class="question-marks">
+                    {{ data.question.marks }} mark{% if data.question.marks != 1 %}s{% endif %}
+                </div>
+            </div>
+            
+            <div class="question-text">
+                {{ data.question.question_text }}
+            </div>
+            
+            <div class="options-container">
+                <div class="option-item">
+                    <input 
+                        type="radio" 
+                        id="q{{ data.question.id }}_a" 
+                        name="question_{{ data.question.id }}" 
+                        value="A"
+                        class="option-input question-input"
+                        data-question-id="{{ data.question.id }}"
+                        {% if data.selected_option == 'A' %}checked{% endif %}
+                    >
+                    <label for="q{{ data.question.id }}_a" class="option-label">
+                        <span class="option-marker">A</span>
+                        <span class="option-text">{{ data.question.option_a }}</span>
+                    </label>
+                </div>
+                
+                <div class="option-item">
+                    <input 
+                        type="radio" 
+                        id="q{{ data.question.id }}_b" 
+                        name="question_{{ data.question.id }}" 
+                        value="B"
+                        class="option-input question-input"
+                        data-question-id="{{ data.question.id }}"
+                        {% if data.selected_option == 'B' %}checked{% endif %}
+                    >
+                    <label for="q{{ data.question.id }}_b" class="option-label">
+                        <span class="option-marker">B</span>
+                        <span class="option-text">{{ data.question.option_b }}</span>
+                    </label>
+                </div>
+                
+                <div class="option-item">
+                    <input 
+                        type="radio" 
+                        id="q{{ data.question.id }}_c" 
+                        name="question_{{ data.question.id }}" 
+                        value="C"
+                        class="option-input question-input"
+                        data-question-id="{{ data.question.id }}"
+                        {% if data.selected_option == 'C' %}checked{% endif %}
+                    >
+                    <label for="q{{ data.question.id }}_c" class="option-label">
+                        <span class="option-marker">C</span>
+                        <span class="option-text">{{ data.question.option_c }}</span>
+                    </label>
+                </div>
+                
+                <div class="option-item">
+                    <input 
+                        type="radio" 
+                        id="q{{ data.question.id }}_d" 
+                        name="question_{{ data.question.id }}" 
+                        value="D"
+                        class="option-input question-input"
+                        data-question-id="{{ data.question.id }}"
+                        {% if data.selected_option == 'D' %}checked{% endif %}
+                    >
+                    <label for="q{{ data.question.id }}_d" class="option-label">
+                        <span class="option-marker">D</span>
+                        <span class="option-text">{{ data.question.option_d }}</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+        
+        <!-- Submit Section -->
+        <div class="submit-section">
+            <div class="submit-warning">
+                ⚠️ Please review all your answers before submitting. Once submitted, you cannot change your answers.
+            </div>
+            
+            <div class="submit-actions">
+                <button type="submit" class="btn-submit" id="submit-btn">
+                    Submit Test
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+// CSRF token
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Timer
+let timeRemaining = {{ time_remaining_seconds }};
+const timerDisplay = document.getElementById('timer');
+
+function updateTimer() {
+    if (timeRemaining <= 0) {
+        document.getElementById('test-form').submit();
+        return;
+    }
+    
+    const hours = Math.floor(timeRemaining / 3600);
+    const minutes = Math.floor((timeRemaining % 3600) / 60);
+    const seconds = timeRemaining % 60;
+    
+    let display = '';
+    if (hours > 0) {
+        display = hours + ':' + String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
+    } else {
+        display = String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
+    }
+    
+    timerDisplay.textContent = display;
+    
+    // Color warnings
+    if (timeRemaining <= 60) {
+        timerDisplay.className = 'timer-display danger';
+    } else if (timeRemaining <= 300) {
+        timerDisplay.className = 'timer-display warning';
+    }
+    
+    timeRemaining--;
+    setTimeout(updateTimer, 1000);
+}
+
+if (timeRemaining > 0 && !{{ time_expired|yesno:"true,false" }}) {
+    updateTimer();
+}
+
+// Progress tracking
+function updateProgress() {
+    const total = {{ test.questions.count }};
+    const answered = document.querySelectorAll('.question-input:checked').length;
+    const remaining = total - answered;
+    
+    document.getElementById('answered-count').textContent = answered;
+    document.getElementById('remaining-count').textContent = remaining;
+}
+
+// Auto-save functionality
+const attemptId = {{ attempt.id }};
+const saveIcon = document.getElementById('save-icon');
+const saveStatus = document.getElementById('save-status');
+
+function showSaving() {
+    saveIcon.className = 'save-icon saving';
+    saveStatus.textContent = 'Saving...';
+}
+
+function showSaved() {
+    saveIcon.className = 'save-icon';
+    saveStatus.textContent = 'Saved';
+    setTimeout(() => {
+        saveStatus.textContent = 'Auto-save enabled';
+    }, 2000);
+}
+
+function showError() {
+    saveIcon.className = 'save-icon';
+    saveStatus.textContent = 'Save failed - will retry';
+    saveStatus.style.color = 'var(--danger-red)';
+    setTimeout(() => {
+        saveStatus.textContent = 'Auto-save enabled';
+        saveStatus.style.color = '';
+    }, 3000);
+}
+
+function autoSave(questionId, selectedOption) {
+    showSaving();
+    
+    fetch("{% url 'process_dojo:autosave_answer' %}", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: 'attempt_id=' + attemptId + '&question_id=' + questionId + '&selected_option=' + selectedOption
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showSaved();
+        } else {
+            showError();
+        }
+    })
+    .catch(error => {
+        console.error('Auto-save error:', error);
+        showError();
+    });
+}
+
+// Attach event listeners
+document.querySelectorAll('.question-input').forEach(input => {
+    input.addEventListener('change', function() {
+        const questionId = this.dataset.questionId;
+        const selectedOption = this.value;
+        autoSave(questionId, selectedOption);
+        updateProgress();
+    });
+});
+
+// Initial progress update
+updateProgress();
+
+// Confirm before leaving
+window.addEventListener('beforeunload', function(e) {
+    e.preventDefault();
+    e.returnValue = '';
+});
+
+// Remove confirmation on submit
+document.getElementById('test-form').addEventListener('submit', function() {
+    window.removeEventListener('beforeunload', function() {});
+});
+</script>
+{% endblock %}

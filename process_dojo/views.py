@@ -194,20 +194,20 @@ class StartTestView(LoginRequiredMixin, View):
                     request,
                     "Please complete watching the video before taking the test."
                 )
-                return redirect('video_detail', pk=video_id)
+                return redirect('process_dojo:video_detail', pk=video_id)
         except VideoCompletion.DoesNotExist:
             messages.error(
                 request,
                 "You must watch the video first before taking the test."
             )
-            return redirect('video_detail', pk=video_id)
+            return redirect('process_dojo:video_detail', pk=video_id)
         
         # Check if test exists
         try:
             test = video.mcq_test
         except MCQTest.DoesNotExist:
             messages.error(request, "No test is available for this video.")
-            return redirect('video_detail', pk=video_id)
+            return redirect('process_dojo:video_detail', pk=video_id)
         
         # Check for existing in-progress attempt
         existing_attempt = TestAttempt.objects.filter(
@@ -218,7 +218,7 @@ class StartTestView(LoginRequiredMixin, View):
         
         if existing_attempt:
             messages.info(request, "Resuming your previous test attempt.")
-            return redirect('test_page', attempt_id=existing_attempt.id)
+            return redirect('process_dojo:test_page', attempt_id=existing_attempt.id)
         
         # Create new attempt
         attempt = TestAttempt.objects.create(
@@ -228,7 +228,7 @@ class StartTestView(LoginRequiredMixin, View):
         )
         
         messages.success(request, f"Test started: {test.title}")
-        return redirect('test_page', attempt_id=attempt.id)
+        return redirect('process_dojo:test_page', attempt_id=attempt.id)
 
 
 class TestPageView(LoginRequiredMixin, DetailView):
@@ -245,10 +245,10 @@ class TestPageView(LoginRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         
-        # Check if test is already completed
+        # Check if test is already completed - redirect if so
         if self.object.status == 'completed':
-            messages.info(self.request, "This test has already been completed.")
-            return redirect('result_page', attempt_id=self.object.id)
+            # Cannot redirect from get_context_data, handle in dispatch instead
+            pass
         
         # Get all questions with saved answers
         questions = self.object.test.questions.all()
@@ -281,6 +281,14 @@ class TestPageView(LoginRequiredMixin, DetailView):
         context['time_expired'] = remaining.total_seconds() <= 0
         
         return context
+    
+    def dispatch(self, request, *args, **kwargs):
+        """Check if test is completed before rendering"""
+        self.object = self.get_object()
+        if self.object.status == 'completed':
+            messages.info(request, "This test has already been completed.")
+            return redirect('process_dojo:result_page', attempt_id=self.object.id)
+        return super().dispatch(request, *args, **kwargs)
 
 
 @login_required
@@ -345,7 +353,7 @@ class SubmitTestView(LoginRequiredMixin, View):
                 f"You scored {attempt.score:.1f}%. Passing score is {attempt.test.passing_score}%. Please try again after reviewing the material."
             )
         
-        return redirect('result_page', attempt_id=attempt.id)
+        return redirect('process_dojo:result_page', attempt_id=attempt.id)
 
 
 class ResultPageView(LoginRequiredMixin, DetailView):
