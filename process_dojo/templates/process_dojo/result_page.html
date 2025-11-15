@@ -1,4 +1,6 @@
+
 {% extends "process_dojo/base.html" %}
+{% load math_extras %}
 
 {% block title %}Test Results{% endblock %}
 
@@ -386,7 +388,7 @@
             <div class="stat-label">Correct Answers</div>
         </div>
         <div class="stat-card incorrect">
-            <div class="stat-value incorrect">{{ attempt.total_questions|add:"-"|add:attempt.correct_answers }}</div>
+            <div class="stat-value incorrect">{{ attempt.total_questions|subtract:attempt.correct_answers }}</div>
             <div class="stat-label">Incorrect Answers</div>
         </div>
         <div class="stat-card total">

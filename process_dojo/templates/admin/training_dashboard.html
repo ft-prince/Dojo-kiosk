@@ -1,0 +1,616 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block extrastyle %}
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+        background: #f5f7fa;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    }
+    
+    .dashboard-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 30px 20px;
+    }
+    
+    /* Clean Header */
+    .page-header {
+        background: white;
+        padding: 35px;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        margin-bottom: 30px;
+        border-left: 5px solid #4f46e5;
+    }
+    
+    .page-header h1 {
+        color: #1e293b;
+        font-size: 2.2em;
+        margin-bottom: 8px;
+        font-weight: 700;
+    }
+    
+    .page-header p {
+        color: #64748b;
+        font-size: 1.05em;
+        margin-bottom: 0;
+    }
+    
+    /* Export Buttons */
+    .export-buttons {
+        margin-top: 25px;
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+    
+    .btn-export {
+        background: #4f46e5;
+        color: white;
+        padding: 12px 24px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 14px;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 4px rgba(79, 70, 229, 0.2);
+    }
+    
+    .btn-export:hover {
+        background: #4338ca;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(79, 70, 229, 0.3);
+    }
+    
+    .btn-export.secondary {
+        background: #0891b2;
+    }
+    
+    .btn-export.secondary:hover {
+        background: #0e7490;
+    }
+    
+    .btn-export.success {
+        background: #059669;
+    }
+    
+    .btn-export.success:hover {
+        background: #047857;
+    }
+    
+    .btn-export.guide {
+        background: #7c3aed;
+    }
+    
+    .btn-export.guide:hover {
+        background: #6d28d9;
+    }
+    
+    /* Stats Grid */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .stat-card {
+        background: white;
+        padding: 24px;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        transition: all 0.2s ease;
+        border-left: 4px solid;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    }
+    
+    .stat-card.purple { border-left-color: #4f46e5; }
+    .stat-card.green { border-left-color: #059669; }
+    .stat-card.orange { border-left-color: #ea580c; }
+    .stat-card.blue { border-left-color: #0891b2; }
+    .stat-card.red { border-left-color: #dc2626; }
+    
+    .stat-card h3 {
+        color: #64748b;
+        font-size: 0.85em;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        margin-bottom: 12px;
+        font-weight: 600;
+    }
+    
+    .stat-card .value {
+        color: #1e293b;
+        font-size: 2.5em;
+        font-weight: 700;
+        margin-bottom: 6px;
+        line-height: 1;
+    }
+    
+    .stat-card .label {
+        color: #94a3b8;
+        font-size: 0.9em;
+    }
+    
+    /* Content Grid */
+    .content-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+        gap: 24px;
+        margin-bottom: 30px;
+    }
+    
+    .card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        overflow: hidden;
+    }
+    
+    .card-header {
+        background: #f8fafc;
+        border-bottom: 1px solid #e2e8f0;
+        color: #1e293b;
+        padding: 18px 24px;
+        font-weight: 600;
+        font-size: 1.05em;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .card-body {
+        padding: 24px;
+        max-height: 500px;
+        overflow-y: auto;
+    }
+    
+    .card-body::-webkit-scrollbar {
+        width: 8px;
+    }
+    
+    .card-body::-webkit-scrollbar-track {
+        background: #f1f5f9;
+        border-radius: 10px;
+    }
+    
+    .card-body::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 10px;
+    }
+    
+    .card-body::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+    }
+    
+    /* List Items */
+    .list-item {
+        padding: 16px 0;
+        border-bottom: 1px solid #f1f5f9;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: all 0.2s ease;
+    }
+    
+    .list-item:last-child {
+        border-bottom: none;
+    }
+    
+    .list-item:hover {
+        background: #f8fafc;
+        padding-left: 12px;
+        border-radius: 8px;
+        margin: 0 -12px;
+        padding-right: 12px;
+    }
+    
+    .list-item-title {
+        color: #1e293b;
+        font-weight: 600;
+        margin-bottom: 6px;
+        font-size: 0.95em;
+    }
+    
+    .list-item-subtitle {
+        color: #64748b;
+        font-size: 0.85em;
+    }
+    
+    /* Badges */
+    .badge {
+        padding: 6px 14px;
+        border-radius: 6px;
+        font-size: 0.8em;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+    
+    .badge-success {
+        background: #d1fae5;
+        color: #065f46;
+    }
+    
+    .badge-warning {
+        background: #fef3c7;
+        color: #92400e;
+    }
+    
+    .badge-danger {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+    
+    .badge-info {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+    
+    /* Progress Bar */
+    .progress-bar {
+        width: 100%;
+        height: 6px;
+        background: #e2e8f0;
+        border-radius: 10px;
+        overflow: hidden;
+        margin-top: 10px;
+    }
+    
+    .progress-fill {
+        height: 100%;
+        background: #4f46e5;
+        border-radius: 10px;
+        transition: width 0.3s ease;
+    }
+    
+    /* Empty State */
+    .empty-state {
+        text-align: center;
+        padding: 50px 20px;
+        color: #94a3b8;
+    }
+    
+    .empty-state-icon {
+        font-size: 3.5em;
+        margin-bottom: 15px;
+        opacity: 0.4;
+    }
+    
+    .empty-state p {
+        font-size: 0.95em;
+        color: #64748b;
+    }
+    
+    /* Table Styles */
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    table th {
+        background: #f8fafc;
+        padding: 12px;
+        text-align: left;
+        font-weight: 600;
+        color: #475569;
+        font-size: 0.82em;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border-bottom: 2px solid #e2e8f0;
+    }
+    
+    table td {
+        padding: 14px 12px;
+        border-bottom: 1px solid #f1f5f9;
+        color: #1e293b;
+        font-size: 0.9em;
+    }
+    
+    table tr:hover {
+        background: #f8fafc;
+    }
+    
+    table tr:last-child td {
+        border-bottom: none;
+    }
+    
+    /* Icon */
+    .icon {
+        display: inline-block;
+        font-size: 1.2em;
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+        .content-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .stats-grid {
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        }
+        
+        .page-header {
+            padding: 25px;
+        }
+        
+        .page-header h1 {
+            font-size: 1.8em;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div class="page-header">
+        <h1>📊 Training Dashboard</h1>
+        <p>Real-time overview of training performance and progress</p>
+        
+        <div class="export-buttons">
+            <a href="{% url 'admin:export_video_report' %}" class="btn-export">
+                <span class="icon">📹</span> Video Report
+            </a>
+            <a href="{% url 'admin:export_test_report' %}" class="btn-export secondary">
+                <span class="icon">📝</span> Test Report
+            </a>
+            <a href="{% url 'admin:export_employee_report' %}" class="btn-export success">
+                <span class="icon">👥</span> Employee Report
+            </a>
+            <a href="{% url 'admin:training_guide' %}" class="btn-export guide">
+                <span class="icon">📖</span> Admin Guide
+            </a>
+        </div>
+    </div>
+    
+    <!-- Summary Statistics -->
+    <div class="stats-grid">
+        <div class="stat-card purple">
+            <h3>Total Employees</h3>
+            <div class="value">{{ total_employees }}</div>
+            <div class="label">Active users</div>
+        </div>
+        
+        <div class="stat-card blue">
+            <h3>Training Videos</h3>
+            <div class="value">{{ total_videos }}</div>
+            <div class="label">Available content</div>
+        </div>
+        
+        <div class="stat-card orange">
+            <h3>MCQ Tests</h3>
+            <div class="value">{{ total_tests }}</div>
+            <div class="label">Active assessments</div>
+        </div>
+        
+        <div class="stat-card green">
+            <h3>Completion Rate</h3>
+            <div class="value">{{ video_completion_rate }}%</div>
+            <div class="label">Videos completed</div>
+        </div>
+        
+        <div class="stat-card red">
+            <h3>Test Pass Rate</h3>
+            <div class="value">{{ test_pass_rate }}%</div>
+            <div class="label">Successfully passed</div>
+        </div>
+    </div>
+    
+    <!-- Main Content Grid -->
+    <div class="content-grid">
+        <!-- Top Performers -->
+        <div class="card">
+            <div class="card-header">
+                <span class="icon">🏆</span> Top Performers
+            </div>
+            <div class="card-body">
+                {% if top_performers %}
+                    {% for performer in top_performers %}
+                    <div class="list-item">
+                        <div>
+                            <div class="list-item-title">
+                                {{ performer.employee_id }} - {{ performer.user.get_full_name|default:performer.user.username }}
+                            </div>
+                            <div class="list-item-subtitle">
+                                {{ performer.unit }} • {{ performer.department }}
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: {% widthratio performer.videos_completed 20 100 %}%"></div>
+                            </div>
+                        </div>
+                        <div style="text-align: right;">
+                            <span class="badge badge-success">{{ performer.videos_completed }} videos</span><br>
+                            <span class="badge badge-info" style="margin-top: 5px;">{{ performer.tests_passed }} tests</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📊</div>
+                        <p>No performance data available yet</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Videos Needing Attention -->
+        <div class="card">
+            <div class="card-header">
+                <span class="icon">⚠️</span> Videos Needing Attention
+            </div>
+            <div class="card-body">
+                {% if videos_needing_attention %}
+                    {% for video in videos_needing_attention %}
+                    <div class="list-item">
+                        <div>
+                            <div class="list-item-title">{{ video.title }}</div>
+                            <div class="list-item-subtitle">
+                                {{ video.operation.line.name }} • {{ video.operation.name }}
+                            </div>
+                        </div>
+                        <div>
+                            {% if video.has_test == 0 %}
+                                <span class="badge badge-danger">No Test</span>
+                            {% else %}
+                                <span class="badge badge-warning">{{ video.completion_count }} completions</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-state">
+                        <div class="empty-state-icon">✅</div>
+                        <p>All videos are performing well!</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Problem Tests -->
+        <div class="card">
+            <div class="card-header">
+                <span class="icon">🎯</span> Tests with Low Pass Rates
+            </div>
+            <div class="card-body">
+                {% if problem_tests %}
+                    {% for test in problem_tests %}
+                    <div class="list-item">
+                        <div>
+                            <div class="list-item-title">{{ test.title }}</div>
+                            <div class="list-item-subtitle">
+                                {{ test.video.title }}
+                            </div>
+                        </div>
+                        <div style="text-align: right;">
+                            <span class="badge badge-danger">{{ test.pass_rate }}% pass</span><br>
+                            <span class="badge badge-info" style="margin-top: 5px;">{{ test.total_attempts }} attempts</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🎉</div>
+                        <p>All tests have good pass rates!</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Unit Progress -->
+        <div class="card">
+            <div class="card-header">
+                <span class="icon">🏭</span> Unit-wise Progress
+            </div>
+            <div class="card-body">
+                {% if unit_progress %}
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Unit</th>
+                                <th>Videos</th>
+                                <th>Completions</th>
+                                <th>Tests</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for unit in unit_progress %}
+                            <tr>
+                                <td><strong>{{ unit.name }}</strong></td>
+                                <td>{{ unit.total_videos }}</td>
+                                <td>{{ unit.total_completions }}</td>
+                                <td>{{ unit.total_test_attempts }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📦</div>
+                        <p>No units found</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Activity -->
+    <div class="content-grid">
+        <div class="card">
+            <div class="card-header">
+                <span class="icon">🎬</span> Recent Video Completions
+            </div>
+            <div class="card-body">
+                {% if recent_completions %}
+                    {% for comp in recent_completions %}
+                    <div class="list-item">
+                        <div>
+                            <div class="list-item-title">
+                                {{ comp.user.employee_profile.employee_id }} - {{ comp.user.get_full_name|default:comp.user.username }}
+                            </div>
+                            <div class="list-item-subtitle">
+                                {{ comp.video.title }} • {{ comp.last_watched_at|date:"M d, H:i" }}
+                            </div>
+                        </div>
+                        <span class="badge badge-success">✓ Completed</span>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🎥</div>
+                        <p>No recent completions</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <span class="icon">📝</span> Recent Test Attempts
+            </div>
+            <div class="card-body">
+                {% if recent_tests %}
+                    {% for attempt in recent_tests %}
+                    <div class="list-item">
+                        <div>
+                            <div class="list-item-title">
+                                {{ attempt.user.employee_profile.employee_id }} - {{ attempt.user.get_full_name|default:attempt.user.username }}
+                            </div>
+                            <div class="list-item-subtitle">
+                                {{ attempt.test.title }} • {{ attempt.completed_at|date:"M d, H:i" }}
+                            </div>
+                        </div>
+                        <div style="text-align: right;">
+                            {% if attempt.passed %}
+                                <span class="badge badge-success">Passed</span>
+                            {% else %}
+                                <span class="badge badge-danger">Failed</span>
+                            {% endif %}
+                            <div style="margin-top: 5px; font-weight: 600; color: #1e293b; font-size: 0.9em;">
+                                {{ attempt.score|floatformat:0 }}%
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📋</div>
+                        <p>No recent test attempts</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -6,3 +6,5 @@ python-decouple>=3.8  # For environment variables (optional)
 gunicorn>=21.2.0
 psycopg2-binary>=2.9.9  # PostgreSQL
 whitenoise>=6.5.0  # Static file serving
+
+openpyxl
