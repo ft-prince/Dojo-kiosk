@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Biometric Enrollment - Process DOJO</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f7fafc;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Header Section */
+        .header {
+            background: white;
+            padding: 25px 30px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-left h1 {
+            color: #2d3748;
+            font-size: 1.8rem;
+            margin-bottom: 5px;
+        }
+
+        .breadcrumb {
+            color: #718096;
+            font-size: 0.9rem;
+        }
+
+        .breadcrumb a {
+            color: #667eea;
+            text-decoration: none;
+        }
+
+        .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .header-right {
+            display: flex;
+            gap: 10px;
+        }
+
+        /* Statistics Cards */
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .stat-icon {
+            font-size: 3rem;
+            width: 70px;
+            height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+        }
+
+        .stat-icon.enrolled {
+            background: #c6f6d5;
+        }
+
+        .stat-icon.pending {
+            background: #fed7d7;
+        }
+
+        .stat-icon.total {
+            background: #bee3f8;
+        }
+
+        .stat-content h3 {
+            font-size: 2rem;
+            color: #2d3748;
+            margin-bottom: 5px;
+        }
+
+        .stat-content p {
+            color: #718096;
+            font-size: 0.95rem;
+        }
+
+        /* Main Content Card */
+        .content-card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .content-header {
+            padding: 20px 30px;
+            background: #f7fafc;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .content-header h2 {
+            color: #2d3748;
+            font-size: 1.3rem;
+        }
+
+        /* Search and Filter */
+        .toolbar {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .search-box {
+            position: relative;
+            flex: 1;
+            min-width: 200px;
+            max-width: 400px;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 10px 15px 10px 40px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 0.95rem;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #718096;
+        }
+
+        .filter-select {
+            padding: 10px 15px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            background: white;
+            cursor: pointer;
+        }
+
+        .filter-select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        /* Table Styles */
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: #f7fafc;
+        }
+
+        th {
+            padding: 15px 20px;
+            text-align: left;
+            font-weight: 600;
+            color: #2d3748;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        tbody tr {
+            border-bottom: 1px solid #e2e8f0;
+            transition: background 0.2s ease;
+        }
+
+        tbody tr:hover {
+            background: #f7fafc;
+        }
+
+        td {
+            padding: 18px 20px;
+            color: #2d3748;
+            font-size: 0.95rem;
+        }
+
+        /* Status Badge */
+        .status-badge {
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .status-badge.enrolled {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+
+        .status-badge.not-enrolled {
+            background: #fed7d7;
+            color: #742a2a;
+        }
+
+        /* Action Buttons */
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5a67d8;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-success {
+            background: #48bb78;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #38a169;
+        }
+
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #2d3748;
+        }
+
+        .btn-secondary:hover {
+            background: #cbd5e0;
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 0.85rem;
+        }
+
+        /* Employee ID Badge */
+        .employee-id {
+            display: inline-block;
+            background: #edf2f7;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-weight: 600;
+            color: #2d3748;
+            font-size: 0.85rem;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #718096;
+        }
+
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+
+        .empty-state h3 {
+            font-size: 1.3rem;
+            margin-bottom: 10px;
+            color: #2d3748;
+        }
+
+        /* Loading Spinner */
+        .loading {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #f3f4f6;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Alert Messages */
+        .alert {
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .alert-success {
+            background: #c6f6d5;
+            color: #22543d;
+            border-left: 4px solid #48bb78;
+        }
+
+        .alert-error {
+            background: #fed7d7;
+            color: #742a2a;
+            border-left: 4px solid #f56565;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+
+            .toolbar {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .search-box {
+                max-width: 100%;
+            }
+
+            .stats-container {
+                grid-template-columns: 1fr;
+            }
+
+            table {
+                font-size: 0.85rem;
+            }
+
+            th, td {
+                padding: 12px 10px;
+            }
+        }
+
+        /* Tooltip */
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 200px;
+            background-color: #2d3748;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 8px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -100px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 0.85rem;
+        }
+
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-left">
+                <h1>👥 Biometric Enrollment Management</h1>
+                <div class="breadcrumb">
+                    <a href="{% url 'process_dojo:dashboard' %}">Dashboard</a> / Biometric Enrollment
+                </div>
+            </div>
+            <div class="header-right">
+                <a href="{% url 'process_dojo:dashboard' %}" class="btn btn-secondary">
+                    ← Back to Dashboard
+                </a>
+            </div>
+        </div>
+
+        <!-- Alert Messages -->
+        <div class="alert alert-success" id="successAlert"></div>
+        <div class="alert alert-error" id="errorAlert"></div>
+
+        <!-- Statistics Cards -->
+        <div class="stats-container">
+            <div class="stat-card">
+                <div class="stat-icon enrolled">
+                    ✓
+                </div>
+                <div class="stat-content">
+                    <h3>{{ enrolled_count }}</h3>
+                    <p>Enrolled Users</p>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon pending">
+                    ⚠
+                </div>
+                <div class="stat-content">
+                    <h3>{{ pending_count }}</h3>
+                    <p>Pending Enrollment</p>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon total">
+                    👥
+                </div>
+                <div class="stat-content">
+                    <h3>{{ employees|length }}</h3>
+                    <p>Total Employees</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Card -->
+        <div class="content-card">
+            <div class="content-header">
+                <h2>Employee List</h2>
+                <div class="toolbar">
+                    <div class="search-box">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" id="searchInput" placeholder="Search by name or employee ID...">
+                    </div>
+                    <select class="filter-select" id="statusFilter">
+                        <option value="all">All Employees</option>
+                        <option value="enrolled">Enrolled Only</option>
+                        <option value="pending">Pending Only</option>
+                    </select>
+                    <select class="filter-select" id="plantFilter">
+                        <option value="all">All Plants</option>
+                        {% for plant in unique_plants %}
+                        <option value="{{ plant }}">{{ plant }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table id="employeeTable">
+                    <thead>
+                        <tr>
+                            <th>Employee ID</th>
+                            <th>Name</th>
+                            <th>Plant</th>
+                            <th>Unit</th>
+                            <th>Department</th>
+                            <th>Status</th>
+                            <th>Enrolled Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if employees %}
+                            {% for emp in employees %}
+                            <tr data-status="{% if emp.biometric_id %}enrolled{% else %}pending{% endif %}" 
+                                data-plant="{{ emp.plant }}"
+                                data-searchtext="{{ emp.employee_id|lower }} {{ emp.user.first_name|lower }} {{ emp.user.last_name|lower }}">
+                                <td>
+                                    <span class="employee-id">{{ emp.employee_id }}</span>
+                                </td>
+                                <td>
+                                    <strong>{{ emp.user.get_full_name }}</strong>
+                                </td>
+                                <td>{{ emp.plant }}</td>
+                                <td>{{ emp.unit }}</td>
+                                <td>{{ emp.department }}</td>
+                                <td>
+                                    {% if emp.biometric_id %}
+                                        <span class="status-badge enrolled">✓ Enrolled</span>
+                                    {% else %}
+                                        <span class="status-badge not-enrolled">⚠ Pending</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if emp.biometric_id %}
+                                        {{ emp.updated_at|date:"Y-m-d H:i" }}
+                                    {% else %}
+                                        <span style="color: #718096;">—</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if emp.biometric_id %}
+                                        <a href="{% url 'process_dojo:biometric_enrollment_form' emp.employee_id %}" 
+                                           class="btn btn-primary btn-sm">
+                                            🔄 Re-enroll
+                                        </a>
+                                    {% else %}
+                                        <a href="{% url 'process_dojo:biometric_enrollment_form' emp.employee_id %}" 
+                                           class="btn btn-success btn-sm">
+                                            ➕ Enroll Now
+                                        </a>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="8">
+                                    <div class="empty-state">
+                                        <div class="empty-state-icon">📋</div>
+                                        <h3>No Employees Found</h3>
+                                        <p>Please add employee profiles first.</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Results Counter -->
+        <div style="margin-top: 15px; text-align: center; color: #718096; font-size: 0.9rem;">
+            Showing <strong id="visibleCount">{{ employees|length }}</strong> of <strong>{{ employees|length }}</strong> employees
+        </div>
+    </div>
+
+    <script>
+        // Search and Filter Functionality
+        const searchInput = document.getElementById('searchInput');
+        const statusFilter = document.getElementById('statusFilter');
+        const plantFilter = document.getElementById('plantFilter');
+        const tableRows = document.querySelectorAll('#employeeTable tbody tr[data-status]');
+        const visibleCountEl = document.getElementById('visibleCount');
+
+        function filterTable() {
+            const searchTerm = searchInput.value.toLowerCase();
+            const statusValue = statusFilter.value;
+            const plantValue = plantFilter.value;
+            let visibleCount = 0;
+
+            tableRows.forEach(row => {
+                const searchText = row.getAttribute('data-searchtext');
+                const status = row.getAttribute('data-status');
+                const plant = row.getAttribute('data-plant');
+
+                // Check all filter conditions
+                const matchesSearch = searchText.includes(searchTerm);
+                const matchesStatus = statusValue === 'all' || status === statusValue;
+                const matchesPlant = plantValue === 'all' || plant === plantValue;
+
+                if (matchesSearch && matchesStatus && matchesPlant) {
+                    row.style.display = '';
+                    visibleCount++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            visibleCountEl.textContent = visibleCount;
+        }
+
+        // Event listeners
+        searchInput.addEventListener('input', filterTable);
+        statusFilter.addEventListener('change', filterTable);
+        plantFilter.addEventListener('change', filterTable);
+
+        // Show alert messages if present
+        const urlParams = new URLSearchParams(window.location.search);
+        const successMsg = urlParams.get('success');
+        const errorMsg = urlParams.get('error');
+
+        if (successMsg) {
+            const successAlert = document.getElementById('successAlert');
+            successAlert.textContent = decodeURIComponent(successMsg);
+            successAlert.style.display = 'block';
+            setTimeout(() => {
+                successAlert.style.display = 'none';
+            }, 5000);
+        }
+
+        if (errorMsg) {
+            const errorAlert = document.getElementById('errorAlert');
+            errorAlert.textContent = decodeURIComponent(errorMsg);
+            errorAlert.style.display = 'block';
+            setTimeout(() => {
+                errorAlert.style.display = 'none';
+            }, 5000);
+        }
+
+        // Auto-refresh enrollment stats every 30 seconds
+        setInterval(() => {
+            location.reload();
+        }, 30000);
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            // Ctrl/Cmd + K to focus search
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                e.preventDefault();
+                searchInput.focus();
+            }
+        });
+
+        // Table row highlighting on hover
+        tableRows.forEach(row => {
+            row.style.cursor = 'pointer';
+            row.addEventListener('click', (e) => {
+                if (e.target.tagName !== 'A' && e.target.tagName !== 'BUTTON') {
+                    const enrollBtn = row.querySelector('.btn');
+                    if (enrollBtn) {
+                        window.location.href = enrollBtn.href;
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>

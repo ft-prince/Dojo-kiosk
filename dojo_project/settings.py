@@ -135,6 +135,7 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')  # for production collectsta
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+SECUGEN_DLL_PATH = os.path.join(BASE_DIR, 'biometric_sdk', 'sgfplib.dll')
 
 LOGIN_REDIRECT_URL = 'process_dojo:dashboard'
 LOGIN_URL = 'process_dojo:login'

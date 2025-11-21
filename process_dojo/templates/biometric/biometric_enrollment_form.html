@@ -1,0 +1,592 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Biometric Enrollment - Process DOJO</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f7fafc;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            color: #2d3748;
+            font-size: 1.8rem;
+            margin-bottom: 10px;
+        }
+
+        .header .breadcrumb {
+            color: #718096;
+            font-size: 0.9rem;
+        }
+
+        .header .breadcrumb a {
+            color: #667eea;
+            text-decoration: none;
+        }
+
+        .enrollment-card {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .employee-info {
+            background: #f7fafc;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            color: #718096;
+            font-weight: 500;
+        }
+
+        .info-value {
+            color: #2d3748;
+            font-weight: 600;
+        }
+
+        .enrollment-status {
+            text-align: center;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 10px 25px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .status-badge.enrolled {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+
+        .status-badge.not-enrolled {
+            background: #fed7d7;
+            color: #742a2a;
+        }
+
+        .fingerprint-capture {
+            text-align: center;
+            padding: 40px;
+            background: #f7fafc;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+
+        .fingerprint-preview {
+            width: 260px;
+            height: 300px;
+            margin: 0 auto 20px;
+            background: #000;
+            border: 3px solid #667eea;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #718096;
+            font-size: 0.9rem;
+        }
+
+        .fingerprint-preview canvas {
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        .quality-meter {
+            margin: 20px auto;
+            max-width: 300px;
+        }
+
+        .quality-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+
+        .quality-bar {
+            height: 25px;
+            background: #e2e8f0;
+            border-radius: 15px;
+            overflow: hidden;
+        }
+
+        .quality-fill {
+            height: 100%;
+            background: #48bb78;
+            transition: width 0.3s ease, background 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+
+        .btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 5px;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #5a67d8;
+        }
+
+        .btn-success {
+            background: #48bb78;
+            color: white;
+        }
+
+        .btn-success:hover:not(:disabled) {
+            background: #38a169;
+        }
+
+        .btn-danger {
+            background: #f56565;
+            color: white;
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            background: #e53e3e;
+        }
+
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #2d3748;
+        }
+
+        .btn-secondary:hover {
+            background: #cbd5e0;
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .button-group {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .alert {
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .alert-success {
+            background: #c6f6d5;
+            color: #22543d;
+            border-left: 4px solid #48bb78;
+        }
+
+        .alert-error {
+            background: #fed7d7;
+            color: #742a2a;
+            border-left: 4px solid #f56565;
+        }
+
+        .alert-warning {
+            background: #feebc8;
+            color: #7c2d12;
+            border-left: 4px solid #ed8936;
+        }
+
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .loading-content {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #f3f4f6;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Fingerprint Enrollment</h1>
+            <div class="breadcrumb">
+                <a href="{% url 'process_dojo:dashboard' %}">Dashboard</a> / 
+                <a href="{% url 'process_dojo:biometric_enrollment_list' %}">Enrollment</a> / 
+                {{ profile.user.get_full_name }}
+            </div>
+        </div>
+
+        <div class="enrollment-card">
+            <div class="employee-info">
+                <h3 style="margin-bottom: 15px; color: #2d3748;">Employee Information</h3>
+                <div class="info-row">
+                    <span class="info-label">Employee ID:</span>
+                    <span class="info-value">{{ profile.employee_id }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Name:</span>
+                    <span class="info-value">{{ profile.user.get_full_name }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Plant:</span>
+                    <span class="info-value">{{ profile.plant }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Unit:</span>
+                    <span class="info-value">{{ profile.unit }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Department:</span>
+                    <span class="info-value">{{ profile.department }}</span>
+                </div>
+            </div>
+
+            <div class="enrollment-status">
+                {% if profile.biometric_id %}
+                <span class="status-badge enrolled">✓ Fingerprint Enrolled</span>
+                {% else %}
+                <span class="status-badge not-enrolled">⚠ Not Enrolled</span>
+                {% endif %}
+            </div>
+
+            <div id="alertContainer"></div>
+
+            <div class="fingerprint-capture">
+                <h3 style="margin-bottom: 20px; color: #2d3748;">Fingerprint Capture</h3>
+                
+                <div class="fingerprint-preview" id="fingerprintPreview">
+                    {% if stored_image_url %}
+                    <img src="{{ stored_image_url }}" alt="Stored Fingerprint" style="max-width: 100%; max-height: 100%;">
+                    {% else %}
+                    <span>No Image</span>
+                    {% endif %}
+                </div>
+
+                <div class="quality-meter">
+                    <div class="quality-label">
+                        <span>Image Quality:</span>
+                        <span id="qualityValue">--</span>
+                    </div>
+                    <div class="quality-bar">
+                        <div class="quality-fill" id="qualityFill" style="width: 0%;">
+                            0%
+                        </div>
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn btn-primary" id="captureBtn">
+                        📸 Capture Fingerprint
+                    </button>
+                    <button class="btn btn-success" id="enrollBtn" disabled>
+                        ✓ Save Enrollment
+                    </button>
+                    {% if profile.biometric_id %}
+                    <button class="btn btn-danger" id="deleteBtn">
+                        🗑 Delete Enrollment
+                    </button>
+                    {% endif %}
+                    <a href="{% url 'process_dojo:biometric_enrollment_list' %}" class="btn btn-secondary">
+                        ← Back to List
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <p style="color: #2d3748; font-weight: 600;">Processing...</p>
+        </div>
+    </div>
+
+    <script src="{% static 'js/biometric_client.js' %}"></script>
+    <script>
+        const bio = new BiometricClient('http://localhost:5000');
+        const employeeId = "{{ profile.employee_id }}";
+        let currentTemplate = null;
+        let currentImage = null;
+        let currentQuality = 0;
+
+        document.getElementById('captureBtn').addEventListener('click', captureFingerprint);
+        document.getElementById('enrollBtn').addEventListener('click', saveEnrollment);
+        
+        {% if profile.biometric_id %}
+        document.getElementById('deleteBtn').addEventListener('click', deleteEnrollment);
+        {% endif %}
+
+        async function captureFingerprint() {
+            showLoading(true);
+            
+            try {
+                const status = await bio.getStatus();
+                if (!status.connected) {
+                    showAlert('⚠️ Scanner not detected!\n\nPlease ensure:\n• SecuGen device is connected via USB\n• Client bridge is running:\n  cd biometric_sdk\n  python secugen_client_bridge.py', 'error');
+                    showLoading(false);
+                    return;
+                }
+
+                const capture = await bio.captureFingerprint();
+                
+                if (!capture.success) {
+                    showAlert('Capture failed: ' + (capture.error || 'Unknown error'), 'error');
+                    showLoading(false);
+                    return;
+                }
+
+                const previewEl = document.getElementById('fingerprintPreview');
+                const canvas = document.createElement('canvas');
+                canvas.width = capture.width;
+                canvas.height = capture.height;
+                
+                if (bio.displayImage(capture.image, capture.width, capture.height, canvas)) {
+                    previewEl.innerHTML = '';
+                    previewEl.appendChild(canvas);
+                }
+
+                currentTemplate = capture.template;
+                currentImage = capture.image;
+                currentQuality = capture.quality;
+
+                updateQuality(capture.quality);
+                showAlert(`✓ Fingerprint captured! Quality: ${capture.quality}%`, 'success');
+                showLoading(false);
+                
+            } catch (error) {
+                console.error('Capture error:', error);
+                showAlert('Error: ' + error.message, 'error');
+                showLoading(false);
+            }
+        }
+
+        async function saveEnrollment() {
+            if (!currentTemplate) {
+                showAlert('Please capture a fingerprint first!', 'warning');
+                return;
+            }
+
+            if (currentQuality < 50) {
+                showAlert('Quality too low! Clean finger and scanner, then try again.', 'warning');
+                return;
+            }
+
+            showLoading(true);
+
+            try {
+                const response = await fetch('{% url "process_dojo:biometric_enroll_save" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        employee_id: employeeId,
+                        template: currentTemplate,
+                        image: currentImage,
+                        quality: currentQuality
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showAlert('✓ Fingerprint enrolled successfully!', 'success');
+                    setTimeout(() => {
+                        window.location.href = '{% url "process_dojo:biometric_enrollment_list" %}';
+                    }, 2000);
+                } else {
+                    showAlert('Enrollment failed: ' + data.error, 'error');
+                }
+            } catch (error) {
+                console.error('Save error:', error);
+                showAlert('Save failed: ' + error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function deleteEnrollment() {
+            if (!confirm('Delete this fingerprint enrollment?')) {
+                return;
+            }
+
+            showLoading(true);
+
+            try {
+                const response = await fetch('{% url "process_dojo:biometric_delete" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        employee_id: employeeId
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showAlert('✓ Fingerprint deleted!', 'success');
+                    setTimeout(() => {
+                        window.location.href = '{% url "process_dojo:biometric_enrollment_list" %}';
+                    }, 2000);
+                } else {
+                    showAlert('Delete failed: ' + data.error, 'error');
+                }
+            } catch (error) {
+                console.error('Delete error:', error);
+                showAlert('Delete failed: ' + error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        function updateQuality(quality) {
+            currentQuality = quality;
+            document.getElementById('qualityValue').textContent = quality + '%';
+            
+            const fill = document.getElementById('qualityFill');
+            fill.style.width = quality + '%';
+            fill.textContent = quality + '%';
+            
+            if (quality >= 70) {
+                fill.style.background = '#48bb78';
+            } else if (quality >= 50) {
+                fill.style.background = '#ed8936';
+            } else {
+                fill.style.background = '#f56565';
+            }
+            
+            document.getElementById('enrollBtn').disabled = quality < 50;
+        }
+
+        function showAlert(message, type) {
+            const container = document.getElementById('alertContainer');
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.style.whiteSpace = 'pre-line';
+            alert.textContent = message;
+            alert.style.display = 'block';
+            
+            container.innerHTML = '';
+            container.appendChild(alert);
+            
+            setTimeout(() => {
+                alert.style.display = 'none';
+            }, 8000);
+        }
+
+        function showLoading(show) {
+            document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none';
+        }
+
+        async function checkDevice() {
+            const status = await bio.getStatus();
+            if (!status.connected) {
+                showAlert('⚠️ Scanner not detected\n\nMake sure:\n1. SecuGen is plugged in via USB\n2. Run: python biometric_sdk/secugen_client_bridge.py', 'warning');
+            }
+        }
+
+        checkDevice();
+    </script>
+</body>
+</html>

@@ -5,10 +5,29 @@ Clean routing for training kiosk application
 from django.urls import path
 from django.contrib.auth import views as auth_views
 from . import views
+from . import biometric_views
 
 app_name = 'process_dojo'
 
 urlpatterns = [
+    # ========================================================================
+    # BIOMETRIC AUTHENTICATION
+    # ========================================================================
+    path('biometric/login/', biometric_views.biometric_login_view, name='biometric_login'),
+    path('biometric/authenticate/', biometric_views.biometric_authenticate, name='biometric_authenticate'),
+    path('biometric/logout/', biometric_views.biometric_logout_view, name='biometric_logout'),
+    path('biometric/device-status/', biometric_views.biometric_device_status, name='biometric_device_status'),
+    
+    # ========================================================================
+    # BIOMETRIC ENROLLMENT (Admin Only)
+    # ========================================================================
+    path('biometric/enrollment/', biometric_views.biometric_enrollment_list, name='biometric_enrollment_list'),
+    path('biometric/enrollment/<str:employee_id>/', biometric_views.biometric_enrollment_form, name='biometric_enrollment_form'),
+    path('biometric/enroll/save/', biometric_views.biometric_enroll_save, name='biometric_enroll_save'),
+    path('biometric/delete/', biometric_views.biometric_delete, name='biometric_delete'),
+
+    
+    
     # ========================================================================
     # AUTHENTICATION
     # ========================================================================
