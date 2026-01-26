@@ -408,8 +408,12 @@ class ResultPageView(LoginRequiredMixin, DetailView):
 # REPORTING VIEWS
 # ============================================================================
 
+# ============================================================================
+# REPORTING VIEWS WITH USERNAME AND ATTEMPT TRACKING
+# ============================================================================
+
 class VideoCompletionReportView(LoginRequiredMixin, View):
-    """Export video completion report as CSV"""
+    """Export video completion report as CSV with username"""
     
     def get(self, request):
         # Get date range from query parameters
@@ -432,8 +436,8 @@ class VideoCompletionReportView(LoginRequiredMixin, View):
         
         writer = csv.writer(response)
         writer.writerow([
-            'Date', 'Time', 'Employee ID', 'Employee Name', 'Plant', 'Unit',
-            'Line', 'Operation', 'Video Title', 'Completion %', 'Completed',
+            'Date', 'Time', 'Username', 'Employee ID', 'Employee Name', 'Plant', 
+            'Unit', 'Line', 'Operation', 'Video Title', 'Completion %', 'Completed',
             'Access Count', 'Last Watched'
         ])
         
@@ -442,6 +446,7 @@ class VideoCompletionReportView(LoginRequiredMixin, View):
             writer.writerow([
                 completion.created_at.strftime('%Y-%m-%d'),
                 completion.created_at.strftime('%H:%M:%S'),
+                completion.user.username,
                 profile.employee_id,
                 completion.user.get_full_name(),
                 profile.plant,
@@ -459,7 +464,7 @@ class VideoCompletionReportView(LoginRequiredMixin, View):
 
 
 class TestAttemptReportView(LoginRequiredMixin, View):
-    """Export test attempt report as CSV"""
+    """Export test attempt report as CSV with username and attempt numbers"""
     
     def get(self, request):
         start_date = request.GET.get('start_date')
@@ -475,18 +480,43 @@ class TestAttemptReportView(LoginRequiredMixin, View):
         if end_date:
             queryset = queryset.filter(started_at__lte=end_date)
         
+        # Order by user, test, and started_at to calculate attempt numbers
+        queryset = queryset.order_by('user', 'test', 'started_at')
+        
         response = HttpResponse(content_type='text/csv')
         response['Content-Disposition'] = 'attachment; filename="test_attempt_report.csv"'
         
         writer = csv.writer(response)
         writer.writerow([
-            'Date', 'Time', 'Employee ID', 'Employee Name', 'Plant', 'Unit',
-            'Line', 'Operation', 'Test Title', 'Score %', 'Correct Answers',
-            'Total Questions', 'Result', 'Duration (minutes)'
+            'Date', 'Time', 'Username', 'Employee ID', 'Employee Name', 'Plant', 
+            'Unit', 'Line', 'Operation', 'Test Title', 'Attempt Number', 
+            'Score %', 'Correct Answers', 'Total Questions', 'Result', 
+            'Duration (minutes)', 'Total Attempts for This Test'
         ])
+        
+        # Track attempt numbers per user per test
+        attempt_tracker = {}
         
         for attempt in queryset:
             profile = attempt.user.employee_profile
+            
+            # Create unique key for user-test combination
+            user_test_key = f"{attempt.user.id}_{attempt.test.id}"
+            
+            # Initialize or increment attempt number
+            if user_test_key not in attempt_tracker:
+                attempt_tracker[user_test_key] = 0
+            attempt_tracker[user_test_key] += 1
+            attempt_number = attempt_tracker[user_test_key]
+            
+            # Calculate total attempts for this user-test combination
+            total_attempts = TestAttempt.objects.filter(
+                user=attempt.user,
+                test=attempt.test,
+                status='completed'
+            ).count()
+            
+            # Calculate duration
             duration = 0
             if attempt.completed_at:
                 duration = int((attempt.completed_at - attempt.started_at).total_seconds() / 60)
@@ -494,6 +524,7 @@ class TestAttemptReportView(LoginRequiredMixin, View):
             writer.writerow([
                 attempt.started_at.strftime('%Y-%m-%d'),
                 attempt.started_at.strftime('%H:%M:%S'),
+                attempt.user.username,
                 profile.employee_id,
                 attempt.user.get_full_name(),
                 profile.plant,
@@ -501,18 +532,114 @@ class TestAttemptReportView(LoginRequiredMixin, View):
                 attempt.test.video.operation.line.name,
                 attempt.test.video.operation.name,
                 attempt.test.title,
+                f"Attempt {attempt_number}",
                 f"{attempt.score:.1f}",
                 attempt.correct_answers,
                 attempt.total_questions,
                 'Pass' if attempt.passed else 'Fail',
                 duration,
+                total_attempts,
             ])
         
         return response
 
 
+class TestAttemptDetailedReportView(LoginRequiredMixin, View):
+    """Detailed test attempt report grouped by user and test"""
+    
+    def get(self, request):
+        start_date = request.GET.get('start_date')
+        end_date = request.GET.get('end_date')
+        
+        queryset = TestAttempt.objects.select_related(
+            'user__employee_profile',
+            'test__video__operation__line__unit'
+        ).filter(status='completed')
+        
+        if start_date:
+            queryset = queryset.filter(started_at__gte=start_date)
+        if end_date:
+            queryset = queryset.filter(started_at__lte=end_date)
+        
+        queryset = queryset.order_by('user', 'test', 'started_at')
+        
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="test_attempt_detailed_report.csv"'
+        
+        writer = csv.writer(response)
+        writer.writerow([
+            'Username', 'Employee ID', 'Employee Name', 'Plant', 'Unit',
+            'Test Title', 'Attempt Number', 'Date', 'Time', 'Score %', 
+            'Result', 'Correct/Total', 'Duration (min)', 
+            'Best Score', 'Total Attempts', 'Pass Rate %'
+        ])
+        
+        # Group attempts by user and test
+        current_user_test = None
+        attempts_list = []
+        
+        for attempt in queryset:
+            user_test_key = f"{attempt.user.id}_{attempt.test.id}"
+            
+            if current_user_test != user_test_key:
+                # Process previous group
+                if attempts_list:
+                    self._write_attempt_group(writer, attempts_list)
+                
+                # Start new group
+                current_user_test = user_test_key
+                attempts_list = [attempt]
+            else:
+                attempts_list.append(attempt)
+        
+        # Process last group
+        if attempts_list:
+            self._write_attempt_group(writer, attempts_list)
+        
+        return response
+    
+    def _write_attempt_group(self, writer, attempts_list):
+        """Write a group of attempts for the same user and test"""
+        if not attempts_list:
+            return
+        
+        first_attempt = attempts_list[0]
+        profile = first_attempt.user.employee_profile
+        
+        # Calculate statistics
+        total_attempts = len(attempts_list)
+        best_score = max(att.score for att in attempts_list)
+        passed_count = sum(1 for att in attempts_list if att.passed)
+        pass_rate = (passed_count / total_attempts * 100) if total_attempts > 0 else 0
+        
+        # Write each attempt
+        for idx, attempt in enumerate(attempts_list, 1):
+            duration = 0
+            if attempt.completed_at:
+                duration = int((attempt.completed_at - attempt.started_at).total_seconds() / 60)
+            
+            writer.writerow([
+                attempt.user.username,
+                profile.employee_id,
+                attempt.user.get_full_name(),
+                profile.plant,
+                profile.unit if hasattr(profile, 'unit') else '',
+                attempt.test.title,
+                f"Attempt {idx}",
+                attempt.started_at.strftime('%Y-%m-%d'),
+                attempt.started_at.strftime('%H:%M:%S'),
+                f"{attempt.score:.1f}",
+                'Pass' if attempt.passed else 'Fail',
+                f"{attempt.correct_answers}/{attempt.total_questions}",
+                duration,
+                f"{best_score:.1f}" if idx == 1 else '',  # Show only on first row
+                total_attempts if idx == 1 else '',  # Show only on first row
+                f"{pass_rate:.1f}" if idx == 1 else '',  # Show only on first row
+            ])
+
+
 class LoginSessionReportView(LoginRequiredMixin, View):
-    """Export login session report as CSV"""
+    """Export login session report as CSV with username"""
     
     def get(self, request):
         start_date = request.GET.get('start_date')
@@ -532,7 +659,7 @@ class LoginSessionReportView(LoginRequiredMixin, View):
         
         writer = csv.writer(response)
         writer.writerow([
-            'Date', 'Login Time', 'Logout Time', 'Employee ID',
+            'Date', 'Login Time', 'Logout Time', 'Username', 'Employee ID',
             'Employee Name', 'Plant', 'Unit', 'Duration (minutes)'
         ])
         
@@ -544,6 +671,7 @@ class LoginSessionReportView(LoginRequiredMixin, View):
                 session.login_time.strftime('%Y-%m-%d'),
                 session.login_time.strftime('%H:%M:%S'),
                 logout_time,
+                session.user.username,
                 profile.employee_id,
                 session.user.get_full_name(),
                 profile.plant,
@@ -555,7 +683,7 @@ class LoginSessionReportView(LoginRequiredMixin, View):
 
 
 class PlantReportView(LoginRequiredMixin, View):
-    """Consolidated plant-level report"""
+    """Consolidated plant-level report with username"""
     
     def get(self, request):
         plant = request.GET.get('plant')
@@ -592,8 +720,8 @@ class PlantReportView(LoginRequiredMixin, View):
         
         writer = csv.writer(response)
         writer.writerow([
-            'Report Type', 'Date', 'Employee ID', 'Name', 'Plant', 'Unit',
-            'Details', 'Status', 'Score/Completion'
+            'Report Type', 'Date', 'Username', 'Employee ID', 'Name', 
+            'Plant', 'Unit', 'Details', 'Status', 'Score/Completion'
         ])
         
         for completion in video_completions:
@@ -601,6 +729,7 @@ class PlantReportView(LoginRequiredMixin, View):
             writer.writerow([
                 'Video Completion',
                 completion.created_at.strftime('%Y-%m-%d'),
+                completion.user.username,
                 profile.employee_id,
                 completion.user.get_full_name(),
                 profile.plant,
@@ -614,7 +743,7 @@ class PlantReportView(LoginRequiredMixin, View):
 
 
 class EmployeeReportView(LoginRequiredMixin, View):
-    """Individual employee training report"""
+    """Individual employee training report with attempt tracking"""
     
     def get(self, request):
         employee_id = request.GET.get('employee_id')
@@ -636,6 +765,7 @@ class EmployeeReportView(LoginRequiredMixin, View):
         
         # Header
         writer.writerow(['Employee Training Report'])
+        writer.writerow(['Username:', user.username])
         writer.writerow(['Employee ID:', profile.employee_id])
         writer.writerow(['Name:', user.get_full_name()])
         writer.writerow(['Plant:', profile.plant])
@@ -663,23 +793,141 @@ class EmployeeReportView(LoginRequiredMixin, View):
         
         writer.writerow([])
         
-        # Test attempts
+        # Test attempts with attempt numbers
         writer.writerow(['TEST RESULTS'])
-        writer.writerow(['Date', 'Test', 'Score %', 'Result', 'Correct', 'Total'])
+        writer.writerow(['Test', 'Attempt #', 'Date', 'Score %', 'Result', 'Correct/Total', 'Duration (min)'])
         
         attempts = TestAttempt.objects.filter(
             user=user,
             status='completed'
-        ).select_related('test__video__operation').order_by('-completed_at')
+        ).select_related('test__video__operation').order_by('test', 'started_at')
+        
+        # Track attempt numbers per test
+        test_attempt_counter = {}
         
         for attempt in attempts:
+            test_id = attempt.test.id
+            if test_id not in test_attempt_counter:
+                test_attempt_counter[test_id] = 0
+            test_attempt_counter[test_id] += 1
+            
+            duration = 0
+            if attempt.completed_at:
+                duration = int((attempt.completed_at - attempt.started_at).total_seconds() / 60)
+            
             writer.writerow([
-                attempt.completed_at.strftime('%Y-%m-%d') if attempt.completed_at else '',
                 attempt.test.title,
+                f"Attempt {test_attempt_counter[test_id]}",
+                attempt.completed_at.strftime('%Y-%m-%d %H:%M') if attempt.completed_at else '',
                 f"{attempt.score:.1f}",
                 'Pass' if attempt.passed else 'Fail',
-                attempt.correct_answers,
-                attempt.total_questions,
+                f"{attempt.correct_answers}/{attempt.total_questions}",
+                duration,
+            ])
+        
+        writer.writerow([])
+        
+        # Test summary
+        writer.writerow(['TEST SUMMARY'])
+        writer.writerow(['Test Name', 'Total Attempts', 'Best Score', 'Latest Score', 'Pass Rate %'])
+        
+        # Group attempts by test
+        from collections import defaultdict
+        test_summary = defaultdict(list)
+        
+        for attempt in attempts:
+            test_summary[attempt.test.id].append(attempt)
+        
+        for test_id, test_attempts in test_summary.items():
+            test = test_attempts[0].test
+            total = len(test_attempts)
+            best = max(att.score for att in test_attempts)
+            latest = test_attempts[-1].score
+            passed = sum(1 for att in test_attempts if att.passed)
+            pass_rate = (passed / total * 100) if total > 0 else 0
+            
+            writer.writerow([
+                test.title,
+                total,
+                f"{best:.1f}%",
+                f"{latest:.1f}%",
+                f"{pass_rate:.1f}%",
+            ])
+        
+        return response
+
+
+class UserTestHistoryReportView(LoginRequiredMixin, View):
+    """Report showing all users and their test attempt history"""
+    
+    def get(self, request):
+        start_date = request.GET.get('start_date')
+        end_date = request.GET.get('end_date')
+        test_id = request.GET.get('test_id')
+        
+        queryset = TestAttempt.objects.select_related(
+            'user__employee_profile',
+            'test__video__operation'
+        ).filter(status='completed')
+        
+        if start_date:
+            queryset = queryset.filter(started_at__gte=start_date)
+        if end_date:
+            queryset = queryset.filter(started_at__lte=end_date)
+        if test_id:
+            queryset = queryset.filter(test_id=test_id)
+        
+        queryset = queryset.order_by('user', 'test', 'started_at')
+        
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="user_test_history_report.csv"'
+        
+        writer = csv.writer(response)
+        writer.writerow([
+            'Username', 'Employee ID', 'Employee Name', 'Test Title',
+            'Attempt History', 'Total Attempts', 'Best Score', 'Average Score',
+            'Pass Rate', 'First Attempt Date', 'Last Attempt Date'
+        ])
+        
+        # Group by user and test
+        from collections import defaultdict
+        user_test_data = defaultdict(list)
+        
+        for attempt in queryset:
+            key = (attempt.user.id, attempt.test.id)
+            user_test_data[key].append(attempt)
+        
+        # Write summary for each user-test combination
+        for (user_id, test_id), attempts in user_test_data.items():
+            first_attempt = attempts[0]
+            profile = first_attempt.user.employee_profile
+            
+            # Calculate statistics
+            total = len(attempts)
+            scores = [att.score for att in attempts]
+            best_score = max(scores)
+            avg_score = sum(scores) / len(scores)
+            passed = sum(1 for att in attempts if att.passed)
+            pass_rate = (passed / total * 100) if total > 0 else 0
+            
+            # Create attempt history string
+            attempt_history = ', '.join([
+                f"#{i+1}: {att.score:.1f}% ({'Pass' if att.passed else 'Fail'})"
+                for i, att in enumerate(attempts)
+            ])
+            
+            writer.writerow([
+                first_attempt.user.username,
+                profile.employee_id,
+                first_attempt.user.get_full_name(),
+                first_attempt.test.title,
+                attempt_history,
+                total,
+                f"{best_score:.1f}%",
+                f"{avg_score:.1f}%",
+                f"{pass_rate:.1f}%",
+                attempts[0].started_at.strftime('%Y-%m-%d'),
+                attempts[-1].started_at.strftime('%Y-%m-%d'),
             ])
         
         return response

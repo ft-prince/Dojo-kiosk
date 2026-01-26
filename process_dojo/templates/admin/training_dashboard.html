@@ -372,6 +372,19 @@
             <a href="{% url 'admin:training_guide' %}" class="btn-export guide">
                 <span class="icon">📖</span> Admin Guide
             </a>
+
+                <!-- NEW BUTTON 1 ⭐ -->
+    <a href="{% url 'process_dojo:test_attempt_detailed_report' %}" class="btn-export primary">
+        <span class="icon">📊</span> Test Attempts Detailed
+        <small>Grouped by user with statistics</small>
+    </a>
+    
+    <!-- NEW BUTTON 2 ⭐ -->
+    <a href="{% url 'process_dojo:user_test_history_report' %}" class="btn-export primary">
+        <span class="icon">📈</span> User Test History
+        <small>Complete attempt history per user</small>
+    </a>
+
         </div>
     </div>
     

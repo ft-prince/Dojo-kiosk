@@ -75,4 +75,12 @@ urlpatterns = [
     path('reports/logins/', views.LoginSessionReportView.as_view(), name='login_report'),
     path('reports/plant/', views.PlantReportView.as_view(), name='plant_report'),
     path('reports/employee/', views.EmployeeReportView.as_view(), name='employee_report'),
+        path('reports/test-attempts-detailed/',  # NEW
+         views.TestAttemptDetailedReportView.as_view(), 
+         name='test_attempt_detailed_report'),
+
+    path('reports/user-test-history/',  # NEW
+         views.UserTestHistoryReportView.as_view(), 
+         name='user_test_history_report'),
+
 ]
