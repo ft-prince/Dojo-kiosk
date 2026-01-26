@@ -269,6 +269,114 @@
         color: #004466;
     }
     
+    /* Completion Modal Styles */
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.7);
+        z-index: 1000;
+        justify-content: center;
+        align-items: center;
+    }
+    
+    .modal-overlay.active {
+        display: flex;
+    }
+    
+    .completion-modal {
+        background-color: var(--white);
+        border-radius: 12px;
+        padding: 2.5rem;
+        max-width: 500px;
+        width: 90%;
+        text-align: center;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        animation: slideUp 0.4s ease-out;
+    }
+    
+    @keyframes slideUp {
+        from {
+            transform: translateY(50px);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+    
+    .modal-icon {
+        font-size: 5rem;
+        margin-bottom: 1rem;
+        animation: celebrate 0.6s ease-in-out;
+    }
+    
+    @keyframes celebrate {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.2); }
+    }
+    
+    .modal-title {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: var(--text-dark);
+        margin-bottom: 0.8rem;
+    }
+    
+    .modal-message {
+        color: var(--dark-gray);
+        font-size: 1.1rem;
+        margin-bottom: 2rem;
+        line-height: 1.6;
+    }
+    
+    .modal-buttons {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    
+    .btn-modal-primary {
+        padding: 0.9rem 2rem;
+        background: linear-gradient(135deg, var(--success-green) 0%, #00aa55 100%);
+        color: var(--white);
+        border: none;
+        border-radius: 6px;
+        font-weight: 700;
+        font-size: 1.05rem;
+        cursor: pointer;
+        transition: transform 0.2s ease, box-shadow 0.3s ease;
+        box-shadow: 0 4px 12px rgba(0, 204, 102, 0.3);
+        text-decoration: none;
+        display: inline-block;
+    }
+    
+    .btn-modal-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(0, 204, 102, 0.4);
+    }
+    
+    .btn-modal-secondary {
+        padding: 0.9rem 2rem;
+        background-color: var(--light-gray);
+        color: var(--text-dark);
+        border: none;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 1.05rem;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
+    
+    .btn-modal-secondary:hover {
+        background-color: var(--medium-gray);
+    }
+    
     @media (max-width: 768px) {
         .video-info-section {
             padding: 1.5rem;
@@ -284,6 +392,28 @@
         
         .test-section {
             padding: 1.5rem;
+        }
+        
+        .completion-modal {
+            padding: 2rem;
+            width: 95%;
+        }
+        
+        .modal-title {
+            font-size: 1.5rem;
+        }
+        
+        .modal-message {
+            font-size: 1rem;
+        }
+        
+        .modal-buttons {
+            flex-direction: column;
+        }
+        
+        .btn-modal-primary,
+        .btn-modal-secondary {
+            width: 100%;
         }
     }
 </style>
@@ -385,7 +515,7 @@
     
     <!-- Test Section -->
     {% if mcq_test %}
-    <div class="test-section">
+    <div class="test-section" id="test-section">
         <div class="test-icon">📝</div>
         <h2 class="test-title">{{ mcq_test.title }}</h2>
         <p class="test-description">{{ mcq_test.description|default:"Test your knowledge of this training module." }}</p>
@@ -412,7 +542,7 @@
             Take Test Now →
         </a>
         {% else %}
-        <button class="btn-test disabled" disabled>
+        <button class="btn-test disabled" disabled id="test-btn-disabled">
             Complete Video to Take Test
         </button>
         <div class="alert-info" style="margin-top: 1rem;">
@@ -426,6 +556,28 @@
     </div>
     {% endif %}
 </div>
+
+<!-- Completion Modal -->
+{% if mcq_test %}
+<div class="modal-overlay" id="completion-modal">
+    <div class="completion-modal">
+        <div class="modal-icon">🎉</div>
+        <h2 class="modal-title">Congratulations!</h2>
+        <p class="modal-message">
+            You've successfully completed the training video. 
+            Ready to test your knowledge?
+        </p>
+        <div class="modal-buttons">
+            <a href="{% url 'process_dojo:start_test' video.id %}" class="btn-modal-primary">
+                Take Test Now →
+            </a>
+            <button class="btn-modal-secondary" onclick="closeModal()">
+                Later
+            </button>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 <script>
 // CSRF token for AJAX requests
@@ -448,9 +600,13 @@ function getCookie(name) {
 const video = document.getElementById('training-video');
 const progressBar = document.getElementById('progress-bar');
 const progressDisplay = document.getElementById('progress-display');
+const completionModal = document.getElementById('completion-modal');
 const videoId = {{ video.id }};
+const hasTest = {% if mcq_test %}true{% else %}false{% endif %};
+const wasAlreadyCompleted = {{ completion.is_completed|yesno:"true,false" }};
 
 let updateTimeout;
+let videoJustCompleted = false;
 
 video.addEventListener('timeupdate', function() {
     if (video.duration > 0) {
@@ -484,15 +640,76 @@ function updateProgress(percentage) {
     .then(response => response.json())
     .then(data => {
         if (data.success && data.is_completed) {
-            // Reload page to show test button if video just completed
-            if ({{ completion.is_completed|yesno:"true,false" }} === false) {
-                setTimeout(function() {
-                    location.reload();
-                }, 1000);
+            // Show modal if video just completed and wasn't completed before
+            if (!wasAlreadyCompleted && !videoJustCompleted && hasTest) {
+                videoJustCompleted = true;
+                showCompletionModal();
             }
         }
     })
     .catch(error => console.error('Error updating progress:', error));
 }
+
+function showCompletionModal() {
+    if (completionModal) {
+        completionModal.classList.add('active');
+        
+        // Update test section UI
+        const testSection = document.getElementById('test-section');
+        if (testSection) {
+            // Update completion status
+            const statusIcons = testSection.querySelectorAll('.requirement-icon.incomplete');
+            statusIcons.forEach(icon => {
+                icon.classList.remove('incomplete');
+                icon.classList.add('complete');
+                icon.textContent = '✓';
+            });
+            
+            // Replace disabled button with active button
+            const disabledBtn = document.getElementById('test-btn-disabled');
+            if (disabledBtn) {
+                const activeBtn = document.createElement('a');
+                activeBtn.href = "{% url 'process_dojo:start_test' video.id %}";
+                activeBtn.className = 'btn-test';
+                activeBtn.textContent = 'Take Test Now →';
+                disabledBtn.parentNode.replaceChild(activeBtn, disabledBtn);
+                
+                // Remove info alert
+                const alertInfo = testSection.querySelector('.alert-info');
+                if (alertInfo) {
+                    alertInfo.remove();
+                }
+            }
+        }
+        
+        // Update progress section status
+        const completionStatus = document.querySelector('.completion-status');
+        if (completionStatus) {
+            completionStatus.innerHTML = '<span class="status-icon">✓</span><span>Training Completed</span>';
+        }
+    }
+}
+
+function closeModal() {
+    if (completionModal) {
+        completionModal.classList.remove('active');
+    }
+}
+
+// Close modal when clicking outside of it
+if (completionModal) {
+    completionModal.addEventListener('click', function(e) {
+        if (e.target === completionModal) {
+            closeModal();
+        }
+    });
+}
+
+// Keyboard navigation for modal
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && completionModal && completionModal.classList.contains('active')) {
+        closeModal();
+    }
+});
 </script>
 {% endblock %}
