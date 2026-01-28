@@ -17,6 +17,19 @@ from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 
 
+#  excel import 
+from django.contrib import admin
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.http import HttpResponse
+from django.urls import path
+from django.db import transaction
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from openpyxl.utils import get_column_letter
+import openpyxl
+from datetime import datetime
+
 # Import your models here (adjust the import path as needed)
 from .models import (
     EmployeeProfile, Unit, Line, Operation, TrainingVideo,
@@ -222,53 +235,552 @@ class TrainingVideoAdmin(admin.ModelAdmin):
     preview_thumbnail.short_description = 'Preview'
 
 
+class QuestionInline(admin.StackedInline):
+    """Stacked inline for better question editing"""
+    model = Question
+    extra = 3
+    fields = [
+        'ordering',
+        'question_text',
+        ('option_a', 'option_b'),
+        ('option_c', 'option_d'),
+        'correct_answer',
+        'marks',
+        'explanation'
+    ]
+
+
 @admin.register(MCQTest)
 class MCQTestAdmin(admin.ModelAdmin):
-    """Manage tests with inline questions"""
+    """Enhanced MCQ Test Admin with Excel import/export"""
+    
     list_display = [
         'title', 
         'video_title',
         'question_count', 
         'passing_score', 
         'time_limit_minutes',
-        'attempt_count',
-        'avg_score',
-        'is_active'
+        'is_active',
+        'upload_questions_button'
     ]
     list_filter = ['is_active', 'video__operation__line__unit']
     search_fields = ['title', 'video__title']
     inlines = [QuestionInline]
     
-    fieldsets = (
-        ('Test Configuration', {
-            'fields': ('video', 'title', 'description', 'passing_score', 'time_limit_minutes', 'is_active')
-        }),
-    )
     
-    def get_queryset(self, request):
-        return super().get_queryset(request).select_related('video').annotate(
-            _question_count=Count('questions'),
-            _attempt_count=Count('attempts'),
-            _avg_score=Avg('attempts__score', filter=Q(attempts__status='completed'))
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path(
+                '<int:test_id>/download-template/',
+                self.admin_site.admin_view(self.download_template),
+                name='mcqtest_download_template'
+            ),
+            path(
+                '<int:test_id>/upload-questions/',
+                self.admin_site.admin_view(self.upload_questions),
+                name='mcqtest_upload_questions'
+            ),
+            path(
+                '<int:test_id>/export-questions/',
+                self.admin_site.admin_view(self.export_questions),
+                name='mcqtest_export_questions'
+            ),
+        ]
+        return custom_urls + urls
+    
+
+    
+    def upload_questions_button(self, obj):
+        from django.urls import reverse
+        from django.utils.html import format_html
+        
+        url = reverse('admin:mcqtest_upload_questions', args=[obj.id])
+        return format_html(
+            '<a class="button" href="{}" style="padding: 5px 10px; background: #0891B2; color: white; '
+            'border-radius: 4px; text-decoration: none; font-size: 11px;">📤 Upload</a>',
+            url
         )
+    upload_questions_button.short_description = 'Upload'
     
     def video_title(self, obj):
         return obj.video.title
     video_title.short_description = 'Video'
     
     def question_count(self, obj):
-        return obj._question_count
+        return obj.questions.count()
     question_count.short_description = 'Questions'
     
-    def attempt_count(self, obj):
-        return obj._attempt_count
-    attempt_count.short_description = 'Attempts'
+    def download_template(self, request, test_id):
+        """Download Excel template for MCQ questions"""
+        try:
+            test = MCQTest.objects.get(id=test_id)
+        except MCQTest.DoesNotExist:
+            messages.error(request, 'Test not found')
+            return redirect('admin:process_dojo_mcqtest_changelist')  # Adjust app name
+        
+        # Create workbook
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "MCQ Questions"
+        
+        # Styling
+        header_fill = PatternFill(start_color="4F46E5", end_color="4F46E5", fill_type="solid")
+        header_font = Font(color="FFFFFF", bold=True, size=12)
+        instruction_fill = PatternFill(start_color="FEF3C7", end_color="FEF3C7", fill_type="solid")
+        instruction_font = Font(color="92400E", bold=True, size=11)
+        border = Border(
+            left=Side(style='thin'),
+            right=Side(style='thin'),
+            top=Side(style='thin'),
+            bottom=Side(style='thin')
+        )
+        
+        # Title
+        ws.merge_cells('A1:I1')
+        title_cell = ws['A1']
+        title_cell.value = f'MCQ Questions Template - {test.title}'
+        title_cell.fill = PatternFill(start_color="1E293B", end_color="1E293B", fill_type="solid")
+        title_cell.font = Font(color="FFFFFF", bold=True, size=14)
+        title_cell.alignment = Alignment(horizontal='center', vertical='center')
+        ws.row_dimensions[1].height = 25
+        
+        # Instructions
+        ws.merge_cells('A2:I2')
+        inst_cell = ws['A2']
+        inst_cell.value = '📝 Instructions: Fill in all columns. Correct Answer must be A, B, C, or D. Question Number will auto-order if left blank.'
+        inst_cell.fill = instruction_fill
+        inst_cell.font = instruction_font
+        inst_cell.alignment = Alignment(horizontal='left', vertical='center', wrap_text=True)
+        ws.row_dimensions[2].height = 30
+        
+        # Empty row
+        ws.row_dimensions[3].height = 5
+        
+        # Headers
+        headers = [
+            'Question Number',
+            'Question Text',
+            'Option A',
+            'Option B',
+            'Option C',
+            'Option D',
+            'Correct Answer',
+            'Marks',
+            'Explanation'
+        ]
+        
+        for col_num, header in enumerate(headers, 1):
+            cell = ws.cell(row=4, column=col_num)
+            cell.value = header
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+            cell.border = border
+        
+        ws.row_dimensions[4].height = 30
+        
+        # Sample rows with examples
+        samples = [
+            (
+                1,
+                'What is the correct procedure for OP-100 Plugging?',
+                'Insert plug at 45 degrees',
+                'Insert plug at 90 degrees',
+                'Insert plug at 30 degrees',
+                'No specific angle required',
+                'B',
+                1,
+                'The plug must be inserted perpendicular (90 degrees) to ensure proper sealing.'
+            ),
+            (
+                2,
+                'Which tool is required for quality check at OP-123?',
+                'Torque wrench',
+                'Caliper',
+                'Micrometer',
+                'Visual inspection only',
+                'C',
+                1,
+                'Micrometer provides the precise measurement needed for this CTQ station.'
+            ),
+            (
+                3,
+                'What is the acceptable tolerance range for dimension X?',
+                '±0.5mm',
+                '±0.1mm',
+                '±0.05mm',
+                '±1.0mm',
+                'B',
+                2,
+                'As per drawing specification DRG-001, tolerance is ±0.1mm for critical dimension X.'
+            ),
+        ]
+        
+        for row_num, sample in enumerate(samples, start=5):
+            for col_num, value in enumerate(sample, 1):
+                cell = ws.cell(row=row_num, column=col_num)
+                cell.value = value
+                cell.border = border
+                cell.alignment = Alignment(vertical='top', wrap_text=True)
+                
+                # Color code correct answer column
+                if col_num == 7:
+                    cell.fill = PatternFill(start_color="D1FAE5", end_color="D1FAE5", fill_type="solid")
+                    cell.font = Font(color="065F46", bold=True)
+                    cell.alignment = Alignment(horizontal='center', vertical='center')
+        
+        # Add more empty rows for data entry
+        for row_num in range(8, 28):
+            for col_num in range(1, 10):
+                cell = ws.cell(row=row_num, column=col_num)
+                cell.border = border
+        
+        # Column widths
+        column_widths = [15, 50, 30, 30, 30, 30, 15, 10, 50]
+        for col_num, width in enumerate(column_widths, 1):
+            ws.column_dimensions[get_column_letter(col_num)].width = width
+        
+        # Freeze panes
+        ws.freeze_panes = 'A5'
+        
+        # Data validation for Correct Answer column
+        from openpyxl.worksheet.datavalidation import DataValidation
+        dv = DataValidation(type="list", formula1='"A,B,C,D"', allow_blank=False)
+        dv.error = 'Please select A, B, C, or D'
+        dv.errorTitle = 'Invalid Answer'
+        ws.add_data_validation(dv)
+        dv.add(f'G5:G100')
+        
+        # Prepare response
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        filename = f'mcq_template_{test.id}_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx'
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        
+        wb.save(response)
+        return response
     
-    def avg_score(self, obj):
-        if obj._avg_score:
-            return f"{obj._avg_score:.1f}%"
-        return "N/A"
-    avg_score.short_description = 'Avg Score'
+
+
+    def upload_questions(self, request, test_id):
+        """Upload questions from Excel file - supports both simple (7-col) and template (9-col) formats"""
+        try:
+            test = MCQTest.objects.get(id=test_id)
+        except MCQTest.DoesNotExist:
+            messages.error(request, 'Test not found')
+            return redirect('admin:process_dojo_mcqtest_changelist')
+        
+        if request.method == 'POST':
+            excel_file = request.FILES.get('excel_file')
+            clear_existing = request.POST.get('clear_existing') == 'on'
+            
+            if not excel_file:
+                messages.error(request, 'Please select an Excel file')
+                return render(request, 'admin/upload_questions.html', {
+                    'test': test,
+                    'title': 'Upload Questions'
+                })
+            
+            try:
+                # Load workbook
+                wb = openpyxl.load_workbook(excel_file)
+                ws = wb.active
+                
+                # Auto-detect format by checking first row
+                first_row_values = [cell.value for cell in ws[1] if cell.value is not None]
+                
+                # Determine format type
+                if len(first_row_values) >= 7 and first_row_values[0] == 'Question Number' and first_row_values[1] in ['Question', 'Question Text']:
+                    if len(first_row_values) == 7:
+                        format_type = 'simple'
+                        data_start_row = 2
+                        messages.info(request, '📝 Detected SIMPLE format (7 columns) - Marks=1, Explanation=blank')
+                    else:
+                        format_type = 'template'
+                        data_start_row = 2
+                        messages.info(request, '📝 Detected FULL format (9 columns)')
+                else:
+                    # Try row 4 for template format
+                    row4_values = [cell.value for cell in ws[4] if cell.value is not None]
+                    if len(row4_values) >= 9 and row4_values[0] == 'Question Number':
+                        format_type = 'template'
+                        data_start_row = 5
+                        messages.info(request, '📝 Detected TEMPLATE format (with headers in row 4)')
+                    else:
+                        messages.error(
+                            request,
+                            '❌ Invalid Excel format. Supported formats:\n\n'
+                            '1. SIMPLE (7 columns, headers in row 1):\n'
+                            '   Question Number | Question | Option-A | Option-B | Option-C | Option-D | Correct Answer\n\n'
+                            '2. FULL (9 columns, headers in row 1):\n'
+                            '   Question Number | Question Text | Option A | Option B | Option C | Option D | Correct Answer | Marks | Explanation\n\n'
+                            '3. TEMPLATE (9 columns, headers in row 4 after title/instructions)'
+                        )
+                        return render(request, 'admin/upload_questions.html', {
+                            'test': test,
+                            'title': 'Upload Questions'
+                        })
+                
+                # Parse questions
+                questions_data = []
+                errors = []
+                
+                for row_num, row in enumerate(ws.iter_rows(min_row=data_start_row, values_only=True), start=data_start_row):
+                    if not any(row):  # Skip completely empty rows
+                        continue
+                    
+                    try:
+                        if format_type == 'simple':
+                            # Simple format: 7 columns
+                            if len(row) < 7:
+                                continue
+                            
+                            question_num = row[0]
+                            question_text = row[1]
+                            opt_a = row[2]
+                            opt_b = row[3]
+                            opt_c = row[4]
+                            opt_d = row[5]
+                            correct = row[6]
+                            marks = 1  # Default for simple format
+                            explanation = ''  # Default for simple format
+                            
+                        else:  # template or full format (9 columns)
+                            if len(row) < 7:
+                                continue
+                            
+                            question_num = row[0]
+                            question_text = row[1]
+                            opt_a = row[2]
+                            opt_b = row[3]
+                            opt_c = row[4]
+                            opt_d = row[5]
+                            correct = row[6]
+                            marks = row[7] if len(row) > 7 and row[7] else 1
+                            explanation = row[8] if len(row) > 8 and row[8] else ''
+                        
+                        # Validate required fields
+                        if not question_text:
+                            errors.append(f'Row {row_num}: Question text is required')
+                            continue
+                        
+                        if not all([opt_a, opt_b, opt_c, opt_d]):
+                            errors.append(f'Row {row_num}: All four options (A, B, C, D) are required')
+                            continue
+                        
+                        # Normalize correct answer to uppercase and strip whitespace
+                        if correct:
+                            correct = str(correct).strip().upper()
+                        
+                        if correct not in ['A', 'B', 'C', 'D']:
+                            errors.append(f'Row {row_num}: Correct answer must be A, B, C, or D (got: "{correct}")')
+                            continue
+                        
+                        # Process values
+                        ordering = int(question_num) if question_num and str(question_num).strip() else len(questions_data) + 1
+                        
+                        try:
+                            marks = int(marks) if marks else 1
+                        except:
+                            marks = 1
+                        
+                        explanation = str(explanation).strip() if explanation else ''
+                        
+                        questions_data.append({
+                            'ordering': ordering,
+                            'question_text': str(question_text).strip(),
+                            'option_a': str(opt_a).strip(),
+                            'option_b': str(opt_b).strip(),
+                            'option_c': str(opt_c).strip(),
+                            'option_d': str(opt_d).strip(),
+                            'correct_answer': correct,
+                            'marks': marks,
+                            'explanation': explanation,
+                        })
+                        
+                    except Exception as e:
+                        errors.append(f'Row {row_num}: Error - {str(e)}')
+                        continue
+                
+                # Show errors if any
+                if errors:
+                    for error in errors[:10]:  # Show first 10 errors
+                        messages.error(request, error)
+                    if len(errors) > 10:
+                        messages.error(request, f'... and {len(errors) - 10} more errors')
+                    return render(request, 'admin/upload_questions.html', {
+                        'test': test,
+                        'title': 'Upload Questions'
+                    })
+                
+                if not questions_data:
+                    messages.warning(request, '⚠️ No valid questions found in Excel file')
+                    return render(request, 'admin/upload_questions.html', {
+                        'test': test,
+                        'title': 'Upload Questions'
+                    })
+                
+                # Import questions in transaction
+                with transaction.atomic():
+                    if clear_existing:
+                        deleted_count = test.questions.count()
+                        test.questions.all().delete()
+                        messages.warning(request, f'🗑️ Deleted {deleted_count} existing questions')
+                    
+                    created_questions = []
+                    for q_data in questions_data:
+                        question = Question.objects.create(
+                            test=test,
+                            **q_data
+                        )
+                        created_questions.append(question)
+                
+                total_marks = sum(q.marks for q in created_questions)
+                messages.success(
+                    request,
+                    f'✅ Successfully imported {len(created_questions)} questions | '
+                    f'Total marks: {total_marks}'
+                )
+                return redirect('admin:process_dojo_mcqtest_change', test.id)
+                
+            except Exception as e:
+                messages.error(request, f'❌ Error processing Excel file: {str(e)}')
+                # Optionally show traceback for debugging
+                import traceback
+                print(traceback.format_exc())  # Print to console for debugging
+                return render(request, 'admin/upload_questions.html', {
+                    'test': test,
+                    'title': 'Upload Questions'
+                })
+        
+        # GET request - show upload form
+        return render(request, 'admin/upload_questions.html', {
+            'test': test,
+            'title': 'Upload Questions'
+        })
+    
+    
+    def export_questions(self, request, test_id):
+        """Export existing questions to Excel"""
+        try:
+            test = MCQTest.objects.get(id=test_id)
+        except MCQTest.DoesNotExist:
+            messages.error(request, 'Test not found')
+            return redirect('admin:process_dojo_mcqtest_changelist')  # Adjust app name
+        
+        questions = test.questions.all().order_by('ordering', 'id')
+        
+        if not questions.exists():
+            messages.warning(request, 'No questions to export')
+            return redirect('admin:process_dojo_mcqtest_change', test.id)  # Adjust app name
+        
+        # Create workbook
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "MCQ Questions"
+        
+        # Styling
+        header_fill = PatternFill(start_color="4F46E5", end_color="4F46E5", fill_type="solid")
+        header_font = Font(color="FFFFFF", bold=True, size=12)
+        border = Border(
+            left=Side(style='thin'),
+            right=Side(style='thin'),
+            top=Side(style='thin'),
+            bottom=Side(style='thin')
+        )
+        
+        # Title
+        ws.merge_cells('A1:I1')
+        title_cell = ws['A1']
+        title_cell.value = f'MCQ Questions - {test.title}'
+        title_cell.fill = PatternFill(start_color="1E293B", end_color="1E293B", fill_type="solid")
+        title_cell.font = Font(color="FFFFFF", bold=True, size=14)
+        title_cell.alignment = Alignment(horizontal='center', vertical='center')
+        ws.row_dimensions[1].height = 25
+        
+        # Metadata
+        ws.merge_cells('A2:I2')
+        meta_cell = ws['A2']
+        meta_cell.value = f'Exported: {datetime.now().strftime("%B %d, %Y at %H:%M:%S")} | Questions: {questions.count()}'
+        meta_cell.font = Font(italic=True, size=10)
+        meta_cell.alignment = Alignment(horizontal='center', vertical='center')
+        
+        # Empty row
+        ws.row_dimensions[3].height = 5
+        
+        # Headers
+        headers = [
+            'Question Number',
+            'Question Text',
+            'Option A',
+            'Option B',
+            'Option C',
+            'Option D',
+            'Correct Answer',
+            'Marks',
+            'Explanation'
+        ]
+        
+        for col_num, header in enumerate(headers, 1):
+            cell = ws.cell(row=4, column=col_num)
+            cell.value = header
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+            cell.border = border
+        
+        ws.row_dimensions[4].height = 30
+        
+        # Data rows
+        for row_num, question in enumerate(questions, start=5):
+            data = [
+                question.ordering,
+                question.question_text,
+                question.option_a,
+                question.option_b,
+                question.option_c,
+                question.option_d,
+                question.correct_answer,
+                question.marks,
+                question.explanation
+            ]
+            
+            for col_num, value in enumerate(data, 1):
+                cell = ws.cell(row=row_num, column=col_num)
+                cell.value = value
+                cell.border = border
+                cell.alignment = Alignment(vertical='top', wrap_text=True)
+                
+                # Highlight correct answer
+                if col_num == 7:
+                    cell.fill = PatternFill(start_color="D1FAE5", end_color="D1FAE5", fill_type="solid")
+                    cell.font = Font(color="065F46", bold=True)
+                    cell.alignment = Alignment(horizontal='center', vertical='center')
+                
+                # Alternate row colors
+                if row_num % 2 == 0:
+                    if col_num != 7:  # Don't override correct answer color
+                        cell.fill = PatternFill(start_color="F8FAFC", end_color="F8FAFC", fill_type="solid")
+        
+        # Column widths
+        column_widths = [15, 50, 30, 30, 30, 30, 15, 10, 50]
+        for col_num, width in enumerate(column_widths, 1):
+            ws.column_dimensions[get_column_letter(col_num)].width = width
+        
+        # Freeze panes
+        ws.freeze_panes = 'A5'
+        
+        # Prepare response
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        filename = f'mcq_questions_{test.id}_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx'
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        
+        wb.save(response)
+        return response
 
 
 # ============================================================================
