@@ -465,7 +465,7 @@ class MCQTestAdmin(admin.ModelAdmin):
 
 
     def upload_questions(self, request, test_id):
-        """Upload questions from Excel file - supports both simple (7-col) and template (9-col) formats"""
+        """Upload questions from Excel file - supports simple (7-col), station (8-col), and template (9-col) formats"""
         try:
             test = MCQTest.objects.get(id=test_id)
         except MCQTest.DoesNotExist:
@@ -492,36 +492,47 @@ class MCQTestAdmin(admin.ModelAdmin):
                 first_row_values = [cell.value for cell in ws[1] if cell.value is not None]
                 
                 # Determine format type
-                if len(first_row_values) >= 7 and first_row_values[0] == 'Question Number' and first_row_values[1] in ['Question', 'Question Text']:
+                format_type = None
+                data_start_row = 2
+                
+                # Check for STATION column format (8 columns)
+                if len(first_row_values) >= 8 and first_row_values[0] and str(first_row_values[0]).lower() in ['station', 'op', 'operation']:
+                    format_type = 'with_station'
+                    messages.info(request, '📝 Detected format WITH STATION column (8 columns) - Station column will be ignored')
+                
+                # Check for simple format (7 columns) without station
+                elif len(first_row_values) >= 7 and first_row_values[0] == 'Question Number' and first_row_values[1] in ['Question', 'Question Text']:
                     if len(first_row_values) == 7:
                         format_type = 'simple'
-                        data_start_row = 2
                         messages.info(request, '📝 Detected SIMPLE format (7 columns) - Marks=1, Explanation=blank')
                     else:
                         format_type = 'template'
-                        data_start_row = 2
                         messages.info(request, '📝 Detected FULL format (9 columns)')
+                
+                # Try row 4 for template format with headers
                 else:
-                    # Try row 4 for template format
                     row4_values = [cell.value for cell in ws[4] if cell.value is not None]
                     if len(row4_values) >= 9 and row4_values[0] == 'Question Number':
                         format_type = 'template'
                         data_start_row = 5
                         messages.info(request, '📝 Detected TEMPLATE format (with headers in row 4)')
-                    else:
-                        messages.error(
-                            request,
-                            '❌ Invalid Excel format. Supported formats:\n\n'
-                            '1. SIMPLE (7 columns, headers in row 1):\n'
-                            '   Question Number | Question | Option-A | Option-B | Option-C | Option-D | Correct Answer\n\n'
-                            '2. FULL (9 columns, headers in row 1):\n'
-                            '   Question Number | Question Text | Option A | Option B | Option C | Option D | Correct Answer | Marks | Explanation\n\n'
-                            '3. TEMPLATE (9 columns, headers in row 4 after title/instructions)'
-                        )
-                        return render(request, 'admin/upload_questions.html', {
-                            'test': test,
-                            'title': 'Upload Questions'
-                        })
+                
+                if not format_type:
+                    messages.error(
+                        request,
+                        '❌ Invalid Excel format. Supported formats:\n\n'
+                        '1. WITH STATION (8 columns, headers in row 1):\n'
+                        '   Station | Question Number | Question | Option-A | Option-B | Option-C | Option-D | Correct Answer\n\n'
+                        '2. SIMPLE (7 columns, headers in row 1):\n'
+                        '   Question Number | Question | Option-A | Option-B | Option-C | Option-D | Correct Answer\n\n'
+                        '3. FULL (9 columns, headers in row 1):\n'
+                        '   Question Number | Question Text | Option A | Option B | Option C | Option D | Correct Answer | Marks | Explanation\n\n'
+                        '4. TEMPLATE (9 columns, headers in row 4 after title/instructions)'
+                    )
+                    return render(request, 'admin/upload_questions.html', {
+                        'test': test,
+                        'title': 'Upload Questions'
+                    })
                 
                 # Parse questions
                 questions_data = []
@@ -532,7 +543,23 @@ class MCQTestAdmin(admin.ModelAdmin):
                         continue
                     
                     try:
-                        if format_type == 'simple':
+                        if format_type == 'with_station':
+                            # 8-column format with Station - IGNORE station column (row[0])
+                            if len(row) < 8:
+                                continue
+                            
+                            # Skip station column, shift everything by 1
+                            question_num = row[1]
+                            question_text = row[2]
+                            opt_a = row[3]
+                            opt_b = row[4]
+                            opt_c = row[5]
+                            opt_d = row[6]
+                            correct = row[7]
+                            marks = 1  # Default for this format
+                            explanation = ''  # Default for this format
+                        
+                        elif format_type == 'simple':
                             # Simple format: 7 columns
                             if len(row) < 7:
                                 continue
@@ -659,8 +686,7 @@ class MCQTestAdmin(admin.ModelAdmin):
         return render(request, 'admin/upload_questions.html', {
             'test': test,
             'title': 'Upload Questions'
-        })
-    
+        })    
     
     def export_questions(self, request, test_id):
         """Export existing questions to Excel"""
